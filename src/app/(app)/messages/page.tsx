@@ -1,0 +1,1 @@
+export default function Page(){return <><h1>Messages</h1><section className="card"><p>Conversations will appear after a mutual match.</p><p className="muted">Planned feature — not connected yet.</p></section></>}

@@ -1,0 +1,10 @@
+export type SkillDirection = "teach" | "learn";
+export type SkillLevel = "beginner" | "intermediate" | "advanced";
+export type SwipeDecision = "like" | "pass";
+export type Profile = { id: string; display_name: string; bio: string; created_at: string };
+export type Skill = { id: string; name: string };
+export type UserSkill = { user_id: string; skill_id: string; direction: SkillDirection; level: SkillLevel };
+export type Swipe = { actor_id: string; target_id: string; decision: SwipeDecision; created_at: string };
+export type Match = { id: string; user_a: string; user_b: string; created_at: string };
+export type Message = { id: string; match_id: string; sender_id: string; body: string; created_at: string };
+export type DiscoveryCard = { id: string; display_name: string; bio: string; teaches: string[]; learns: string[] };

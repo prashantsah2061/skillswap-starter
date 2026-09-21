@@ -1,0 +1,1 @@
+export default async function Conversation({params}:{params:Promise<{matchId:string}>}){const {matchId}=await params;return <><h1>Conversation</h1><p>Conversation reference: <code>{matchId}</code></p><section className="card">TODO: verify membership on the server before reading or sending any messages.</section></>}

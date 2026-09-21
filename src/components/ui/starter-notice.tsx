@@ -1,0 +1,1 @@
+export function StarterNotice(){return <p className="notice"><strong>Starter preview.</strong> Profiles are fictional. Authentication and database features are not connected. Buttons marked unavailable do not save data.</p>}

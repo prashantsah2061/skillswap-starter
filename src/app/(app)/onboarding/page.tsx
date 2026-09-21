@@ -1,0 +1,1 @@
+export default function Page(){return <><h1>Welcome to SkillSwap</h1><section className="card"><p>After sign-up, collect a display name, a short bio, at least one teaching skill, and at least one learning goal.</p><p className="muted">Planned feature — not connected yet.</p></section></>}

@@ -1,0 +1,1 @@
+export default function Page(){return <><h1>Edit profile</h1><section className="card"><p>Build the profile form here and connect it to PATCH /api/profiles/me.</p><p className="muted">Planned feature — not connected yet.</p></section></>}

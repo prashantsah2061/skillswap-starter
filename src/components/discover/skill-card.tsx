@@ -1,0 +1,3 @@
+import type { DiscoveryCard } from "@/types/domain";
+import { SkillBadge } from "@/components/skills/skill-badge";
+export function SkillCard({profile}:{profile:DiscoveryCard}){return <article className="card"><div className="avatar" aria-hidden="true">{profile.display_name[0]}</div><h2>{profile.display_name}</h2><p className="muted">{profile.bio}</p><strong>Can teach</strong><div>{profile.teaches.map(s=><SkillBadge key={s} name={s}/>)}</div><strong>Wants to learn</strong><div>{profile.learns.map(s=><SkillBadge key={s} name={s}/>)}</div><p className="muted">Matching will be connected in milestone 4.</p><button className="button secondary" disabled>Pass · unavailable</button><button className="button" disabled>Interested · unavailable</button></article>}
