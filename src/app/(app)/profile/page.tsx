@@ -1,1 +1,0 @@
-export default function Page(){return <><h1>My profile</h1><section className="card"><p>Your name, bio, teaching skills, and learning goals will appear here.</p><p className="muted">Planned feature — not connected yet.</p></section></>}

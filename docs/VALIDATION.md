@@ -1,3 +1,5 @@
+> Folder organization: the frontend and backend are separate npm workspaces. See the root README for current commands. Backend integration steps below describe future work; the frontend currently uses local demo state.
+
 # Validation of this delivered scaffold
 
 Passed during preparation:
@@ -19,6 +21,6 @@ are implementation work, not delivered functionality.
 Resolved key versions:
 - next: 16.3.5
 - react: 19.3.0
-- @supabase/ssr: 0.8.0
-- @supabase/supabase-js: 2.116.0
+- @backend/supabase/ssr: 0.8.0
+- @backend/supabase/supabase-js: 2.116.0
 - typescript: 5.9.3

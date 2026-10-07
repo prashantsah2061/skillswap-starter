@@ -2,22 +2,6 @@
   "name": "skillswap",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "next": "^16.0.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "@supabase/ssr": "^0.8.0",
-    "@supabase/supabase-js": "^2.57.0",
-    "zod": "^4.1.0",
-    "server-only": "^0.0.1"
-  },
   "devDependencies": {
     "typescript": "^5.9.0",
     "@types/node": "^22.0.0",
@@ -28,5 +12,21 @@
   },
   "engines": {
     "node": ">=22.0.0"
+  },
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @skillswap/frontend --",
+    "dev:frontend": "npm run dev --workspace @skillswap/frontend --",
+    "dev:backend": "npm run dev --workspace @skillswap/backend",
+    "build": "npm run build --workspaces",
+    "build:frontend": "npm run build --workspace @skillswap/frontend",
+    "build:backend": "npm run build --workspace @skillswap/backend",
+    "start": "npm run start --workspace @skillswap/frontend",
+    "start:backend": "npm run start --workspace @skillswap/backend",
+    "lint": "eslint frontend backend shared",
+    "typecheck": "npm run typecheck --workspaces"
   }
 }

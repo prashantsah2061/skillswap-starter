@@ -1,3 +1,5 @@
+> Folder organization: the frontend and backend are separate npm workspaces. See the root README for current commands. Backend integration steps below describe future work; the frontend currently uses local demo state.
+
 # Test checklist
 
 ## Starter checks

@@ -1,1 +1,0 @@
-export default function Page(){return <><h1>Your matches</h1><section className="card"><p>Mutual interest will create a match here. No real matches exist in this preview.</p><p className="muted">Planned feature — not connected yet.</p></section></>}

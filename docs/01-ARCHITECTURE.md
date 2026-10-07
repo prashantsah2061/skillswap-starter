@@ -1,79 +1,44 @@
-# Understand the structure first
+# SkillSwap architecture
 
-## Your technology stack
+The repository contains two independent Next.js applications managed with npm workspaces. The frontend uses local demo state. The backend remains the preserved starter scaffold and is not connected to the frontend.
 
-| Layer | Tool | Responsibility |
-|---|---|---|
-| Frontend | React inside Next.js | Screens, forms, cards, navigation |
-| Backend | Next.js Route Handlers | Validate requests, check identity, run business logic |
-| Database | Supabase Postgres | Persistent tables, relationships, constraints |
-| Authentication | Supabase Auth | Accounts, passwords, sessions, email confirmation |
-| Data access | Supabase JS client | Query Postgres through Supabase's API |
-| Styling | CSS | Responsive page layout and appearance |
+## Responsibilities
 
-Supabase is more than a database: this design also uses its authentication.
-You do not write password hashing or a custom JWT system for this project.
+| Folder | Responsibility |
+| --- | --- |
+| `frontend/src/app/` | Frontend pages and layouts |
+| `frontend/src/components/` | Reusable UI and feature components |
+| `frontend/src/lib/` | Fictional demo fixtures and frontend-only helpers |
+| `frontend/public/` | Local images and static assets |
+| `backend/src/app/api/` | Existing backend route handlers |
+| `backend/src/app/auth/` | Existing email-confirmation route scaffold |
+| `backend/src/services/` | Future business rules |
+| `backend/src/models/` | Future data-access implementation |
+| `backend/src/lib/` | Backend validators, authentication, and Supabase helpers |
+| `backend/src/proxy.ts` | Preserved optional backend session-refresh proxy |
+| `backend/supabase/` | Database migrations, seed data, and test plans |
+| `shared/types/` | Common domain types and generated-database type placeholder |
+| `docs/` | Architecture, setup, and capstone planning |
+| `tests/` | Existing unit, integration, and end-to-end test plans |
 
-## Vocabulary with a SkillSwap example
+Each application owns its package manifest, TypeScript config, and Next.js config. One root lockfile and npm workspace installation manage dependencies. Common lint settings and development tools live at the root.
 
-- A **page** is a screen: `/discover` shows skill cards.
-- A **component** is a reusable piece of a screen: `SkillCard`.
-- A **route** is an address: `/api/swipes`.
-- A **router** chooses the code for that address. Next.js builds it from folders.
-- A **Route Handler** exports GET, POST, PATCH, or DELETE functions in route.ts.
-- A **validator** checks external input before using it.
-- A **service** contains a business rule, such as mutual interest creates a match.
-- A **model** in this starter wraps database queries. It is not a Mongoose class.
-- A **type** describes a data shape to TypeScript; it does not create a database table.
-- A **migration** is versioned SQL that creates/changes actual tables and permissions.
-- **Authentication** asks who is signed in.
-- **Authorization** asks whether that person may read/change this data.
-- **RLS** applies row permissions inside Postgres, even if someone bypasses the UI.
+`@/` imports resolve within the current application's `src/`. `@shared/` imports resolve to common types in `shared/types/`.
 
-## How one request will work
+## Current demo behavior
 
-1. A user clicks Interested on a card in a client component.
-2. The component sends POST /api/swipes with target_id and decision.
-3. The handler verifies the session using the server Supabase client.
-4. It parses and validates JSON; the actor ID comes from the verified session.
-5. A service rejects self-swipes and calls the matching database function.
-6. The database records interest and creates a match if the other person liked back.
-7. The endpoint returns a consistent JSON result.
-8. The component shows the next card or a match notification.
+The frontend runs on port 3000 and requires no backend server or Supabase credentials. Mock data lives in `frontend/src/lib/frontend-data.ts`; shared React state and validated localStorage restoration live in `frontend/src/components/demo/demo-provider.tsx`.
 
-Server Components may call services directly for reads; they need not fetch their
-own application's API over HTTP. Browser mutations use Route Handlers in this
-starter so your team has a clear, consistent learning path.
+The backend scaffold runs separately on port 3002. Its `/api/health` endpoint reports scaffold status without checking the database. Unimplemented feature endpoints return HTTP 501. Optional backend Supabase configuration belongs in `backend/.env.local`.
 
-## Folder conventions
+## Future integration
 
-| Path | Meaning |
-|---|---|
-| src/app/page.tsx | Homepage at / |
-| src/app/layout.tsx | Shared HTML/body wrapper |
-| src/app/(auth) | Grouping folder, absent from URLs |
-| src/app/(app) | Main feature screens; grouping does NOT enforce auth |
-| src/app/api | HTTP API endpoints |
-| src/app/auth/confirm | Email-confirmation handler location |
-| src/components | Reusable UI grouped by feature |
-| src/lib/supabase | Client setup and cookie refresh |
-| src/lib/auth | Verified-user helper |
-| src/lib/validators | Zod schemas |
-| src/services | Business rules |
-| src/models | Database query wrappers |
-| src/types | TypeScript types |
-| src/hooks | Reusable interactive client behavior |
-| supabase/migrations | Versioned SQL |
-| supabase/seed.sql | Development skill catalog |
-| tests | Planned automated tests |
-| public | Static files accessible from the website |
+To connect real features later, configure a backend API URL for the frontend, implement authentication and endpoint authorization, and choose an appropriate CORS/cookie strategy for separate origins. The frontend should communicate with backend endpoints rather than importing backend models or services.
 
-`[userId]` and `[matchId]` represent dynamic URL segments. In this Next.js version,
-page params are awaited. `(app)` and `(auth)` do not appear in URLs.
+A future swipe flow would send a decision to the backend, validate the authenticated actor, execute a transactional reciprocal-match rule, and return a result to the frontend. Message persistence, invitations, and real sessions also remain future backend work.
 
-Use `use client` only for components that need state, event handlers or browser
-APIs. Keep database services server-only. Never import a server model into a
-client component. Components can import shared types without database access.
+## Conventions
 
-Begin with one working feature across every layer. Avoid creating generic
-repository factories or adding an ORM until you have a clear need.
+Keep mock data out of UI components and server-only code out of `shared/` and the frontend. Use client components for browser state and events. Await Next.js dynamic page parameters. Never use a user's browser-supplied identifier as proof of backend authorization. Do not store passwords in demo state.
+
+See the root README for current commands and `FRONTEND-DEMO.md` for the completed frontend behavior.

@@ -1,3 +1,5 @@
+> Folder organization: the frontend and backend are separate npm workspaces. See the root README for current commands. Backend integration steps below describe future work; the frontend currently uses local demo state.
+
 # Setup, one small step at a time
 
 ## A. Everyone prepares their computer
@@ -20,7 +22,7 @@
    On Windows PowerShell use `Copy-Item .env.example .env.local`.
 6. Paste the URL and publishable key into .env.local. Leave no example placeholders.
 7. Stop and restart npm run dev after editing environment variables.
-8. Follow supabase/README.md to apply the initial SQL and skill seed.
+8. Follow backend/supabase/README.md to apply the initial SQL and skill seed.
 9. Share the URL and publishable key through your team's agreed channel. Do not share
    a secret/service-role key or put one in a browser variable.
 

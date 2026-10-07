@@ -6,5 +6,5 @@ out/
 *.tsbuildinfo
 .DS_Store
 coverage/
-supabase/.temp/
-supabase/.branches/
+backend/supabase/.temp/
+backend/supabase/.branches/

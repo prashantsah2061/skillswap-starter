@@ -1,3 +1,5 @@
+> Folder organization: the frontend and backend are separate npm workspaces. See the root README for current commands. Backend integration steps below describe future work; the frontend currently uses local demo state.
+
 # Implementation milestones
 
 Complete each milestone before depending on its unfinished behavior. The scaffold
@@ -6,7 +8,7 @@ is the starting point; the steps below are work for your capstone team.
 ## Milestone 1 — Understand and customize the layout
 
 1. Run the project without credentials.
-2. Open src/app/page.tsx and change the introduction.
+2. Open frontend/src/app/page.tsx and change the introduction.
 3. Inspect SiteNav and SkillCard to see reusable components.
 4. Edit globals.css and check mobile and desktop widths.
 5. Inspect an API route: a route.ts exports HTTP method functions.
@@ -58,7 +60,7 @@ The scaffold deliberately provides no global server client: each request gets it
 13. Test the profile persists across a refresh and another user cannot change it.
 
 Generate Supabase Database types after applying migrations, replacing the placeholder
-src/types/database.ts. Add that type to the client factories for typed database queries.
+shared/types/database.ts. Add that type to the client factories for typed database queries.
 
 ## Milestone 4 — Discovery and matching
 
