@@ -1,6 +1,6 @@
 # SkillSwap
 
-A responsive capstone frontend for exchanging skills, with a separate backend starter scaffold. The frontend uses fictional data, React state, and browser storage. No account, database, or real call setup is needed.
+A responsive capstone frontend for exchanging skills, with a separate backend starter scaffold. The frontend uses Supabase Authentication and private user profiles, with fictional sample discovery, messaging, and session content. Calls remain simulated.
 
 ## Folder structure
 
@@ -36,10 +36,11 @@ Use Node.js 22 or newer:
 git clone https://github.com/prashantsah2061/skillswap-starter.git
 cd skillswap-starter
 npm ci
+# Copy frontend/.env.example to frontend/.env.local and fill in the settings.
 npm run dev
 ```
 
-Open http://localhost:3000 and choose **Try demo**. `npm run dev` starts the frontend only.
+Open http://localhost:3000 and sign in or create an account. `npm run dev` starts the frontend only. Set up Supabase and private profile storage using the [authentication guide](docs/AUTHENTICATION-REVIEW.md).
 
 To run the backend scaffold in another terminal:
 
@@ -65,6 +66,10 @@ The backend uses http://localhost:3002. `/api/health` reports scaffold status; u
 
 ## Frontend features
 
-Sign-in/sign-up demonstrations, six skill categories, searchable skill lists, partner discovery with swipes, predefined demo matches, local messaging, session scheduling, simulated session controls, and an editable profile. Non-sensitive preferences persist in localStorage. Passwords are never saved or submitted.
+Real Supabase email/password and Google authentication, verified password recovery, MFA, private editable profiles, and an illustrated multi-field skill community on the login page. Discovery, matching, messaging, and session content remain fictional browser-based examples. Passwords are managed by Supabase Auth and are never stored in application tables or browser preferences.
 
 See [Frontend demo guide](docs/FRONTEND-DEMO.md) for routes, interactions, and verification. See [Architecture](docs/01-ARCHITECTURE.md) for the preserved backend integration plan.
+
+## Host on Render
+
+Use a **Node web service** from the repository root. The included `render.yaml` contains no credentials. Follow [the Render deployment guide](docs/RENDER-DEPLOYMENT.md) to set build/start commands and enter your environment values privately in Render.

@@ -1,13 +1,27 @@
 import "server-only";
+
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getSupabaseConfig } from "./config";
-export async function createClient(){
- const store=await cookies();const {url,key}=getSupabaseConfig();
- return createServerClient(url,key,{cookies:{
- getAll(){return store.getAll()},
- setAll(values){try{values.forEach(({name,value,options})=>store.set(name,value,options))}catch{
- // Server Components cannot write cookies. Proxy must refresh sessions.
- }}
- }});
+
+// Create a new client per request; never share user sessions across requests.
+export async function createClient() {
+  const store = await cookies();
+  const { url, key } = getSupabaseConfig();
+
+  return createServerClient(url, key, {
+    cookies: {
+      getAll() {
+        return store.getAll();
+      },
+      setAll(values) {
+        try {
+          values.forEach(({ name, value, options }) => store.set(name, value, options));
+        } catch {
+          // Server Components cannot write cookies. The proxy refreshes the
+          // session before rendering and forwards cookies to the browser.
+        }
+      },
+    },
+  });
 }

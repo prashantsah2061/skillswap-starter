@@ -1,4 +1,4 @@
-import { AuthScreen } from "@/components/demo/auth-screen";
+import { SignupScreen } from "@/components/auth/signup-screen";
 export default function Page() {
-  return <AuthScreen mode="signup" />;
+  return <SignupScreen />;
 }

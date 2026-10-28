@@ -2,29 +2,29 @@
 import { useState, type FormEvent } from "react";
 import { categories, type DemoProfile } from "@/lib/frontend-data";
 import { useDemo } from "./demo-provider";
+import { useAccount } from "@/components/auth/account-provider";
+import { saveProfileAction } from "@/lib/profile/actions";
 import { Photo, Badge } from "./ui";
 export function Profile() {
+  const account = useAccount();
+  const [saving, setSaving] = useState(false);
   const { data, update, storageWarning } = useDemo();
   const [draft, setDraft] = useState<DemoProfile | null>(null);
   const [notice, setNotice] = useState("");
-  const profile = draft || data.profile;
+  const profile = draft || { ...data.profile, name: account.name, city: account.profile?.city || "", bio: account.profile?.bio || "" };
   function edit<K extends keyof DemoProfile>(key: K, value: DemoProfile[K]) {
     setDraft({ ...profile, [key]: value });
     setNotice("");
   }
-  function save(e: FormEvent) {
+  async function save(e: FormEvent) {
     e.preventDefault();
-    if (
-      !profile.name.trim() ||
-      !profile.city.trim() ||
-      !profile.teaches.length ||
-      !profile.learns.length
-    ) {
-      setNotice(
-        "Add your name, city, and at least one teaching and learning skill.",
-      );
-      return;
-    }
+    if (saving) return;
+    if (!profile.name.trim()) { setNotice("Enter your display name."); return; }
+    setSaving(true);
+    try {
+      const result = await saveProfileAction({ display_name: profile.name, city: profile.city, bio: profile.bio });
+      if (result.error || !result.profile) { setNotice(result.error || "Profile could not be saved."); return; }
+      account.setProfile(result.profile);
     update((d) => ({
       ...d,
       profile: {
@@ -36,8 +36,10 @@ export function Profile() {
     }));
     setDraft(null);
     setNotice(
-      "Demo profile saved locally. Your changes appear across SkillSwap.",
+      "Profile saved. Your display name is updated across SkillSwap.",
     );
+    } catch { setNotice("Profile could not be saved. Please try again."); }
+    finally { setSaving(false); }
   }
   return (
     <>
@@ -49,7 +51,7 @@ export function Profile() {
       <form className="profile-layout" onSubmit={save}>
         <aside className="card profile-preview">
           <Photo photo={profile.photo} alt="Demo profile photo" />
-          <Badge tone="mint">Demo profile</Badge>
+          <Badge tone="mint">Your profile</Badge>
           <h2>{profile.name}</h2>
           <p className="muted">⌖ {profile.city}</p>
           <p>{profile.bio}</p>
@@ -70,20 +72,20 @@ export function Profile() {
         </aside>
         <section className="card profile-form">
           <h2>Make yourself known</h2>
+          {!account.profile && <p className="error-feedback">Your profile is temporarily unavailable. Please try again later.</p>}
           <div className="form-grid">
             <label>
-              Name
+              Display name
               <input
                 required
-                maxLength={60}
+                maxLength={80}
                 value={profile.name}
                 onChange={(e) => edit("name", e.target.value)}
               />
             </label>
             <label>
-              City
+              City (optional)
               <input
-                required
                 maxLength={80}
                 value={profile.city}
                 onChange={(e) => edit("city", e.target.value)}
@@ -147,7 +149,7 @@ export function Profile() {
             </fieldset>
           ))}
           <div className="profile-save">
-            <button className="button lime">Save demo profile</button>
+            <button className="button lime" disabled={saving || !account.profile}>{saving ? "Saving…" : "Save profile"}</button>
             <button
               type="button"
               className="text-button"
@@ -166,8 +168,8 @@ export function Profile() {
           )}
           <small className="muted">
             {storageWarning
-              ? "Browser storage is unavailable. Changes last for this visit."
-              : "Non-sensitive demo preferences stay in this browser."}
+              ? "Browser storage is unavailable. Skill and photo preferences last for this visit."
+              : "Your name, city, and bio are saved to your account. Skill and photo preferences stay in this browser."}
           </small>
         </section>
       </form>

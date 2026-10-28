@@ -1,1 +1,3 @@
-export default function Page(){return <><h1>Settings</h1><section className="card"><p>Add password recovery, notification preferences, and account controls in a later milestone.</p><p className="muted">Planned feature — not connected yet.</p></section></>}
+import { redirect } from "next/navigation";
+import { requireUser } from "@/lib/auth/require-user";
+export default async function Page() { await requireUser(true); redirect("/security"); }

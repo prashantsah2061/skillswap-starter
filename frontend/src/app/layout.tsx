@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { DemoProvider } from "@/components/demo/demo-provider";
+import "./theme.css";
 import "./globals.css";
 export const metadata: Metadata = {
   title: "SkillSwap | Learn something. Share something.",
@@ -10,7 +10,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <DemoProvider>{children}</DemoProvider>
+        {children}
       </body>
     </html>
   );

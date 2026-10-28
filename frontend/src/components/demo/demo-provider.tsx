@@ -48,7 +48,7 @@ const Context = createContext<{
   update: (fn: (prev: DemoState) => DemoState) => void;
   storageWarning: boolean;
 } | null>(null);
-export function DemoProvider({ children }: { children: ReactNode }) {
+export function DemoProvider({ children, storageKey }: { children: ReactNode; storageKey: string }) {
   const [data, setData] = useState(initialDemo);
   const [ready, setReady] = useState(false);
   const [storageWarning, setWarning] = useState(false);
@@ -56,7 +56,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     // The first client render matches the server. Restore preferences after hydration.
     const task = setTimeout(() => {
       try {
-        const saved = localStorage.getItem("skillswap-demo-v1");
+        const saved = localStorage.getItem(storageKey);
         if (saved) {
           const parsed = stateSchema.safeParse(JSON.parse(saved));
           if (parsed.success) setData(parsed.data);
@@ -67,19 +67,19 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       setReady(true);
     }, 0);
     return () => clearTimeout(task);
-  }, []);
+  }, [storageKey]);
   useEffect(() => {
     if (!ready) return;
     let warning: ReturnType<typeof setTimeout> | undefined;
     try {
-      localStorage.setItem("skillswap-demo-v1", JSON.stringify(data));
+      localStorage.setItem(storageKey, JSON.stringify(data));
     } catch {
       warning = setTimeout(() => setWarning(true), 0);
     }
     return () => {
       if (warning) clearTimeout(warning);
     };
-  }, [data, ready]);
+  }, [data, ready, storageKey]);
   return (
     <Context.Provider value={{ data, update: setData, storageWarning }}>
       {children}

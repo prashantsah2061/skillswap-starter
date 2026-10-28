@@ -2,9 +2,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useId, type ReactNode } from "react";
-export function Logo() {
+export function Logo({ href = "/explore" }: { href?: string }) {
   return (
-    <Link className="brand" href="/explore" aria-label="SkillSwap explore">
+    <Link className="brand" href={href} aria-label={href === "/login" ? "SkillSwap sign in" : "SkillSwap explore"}>
       <span className="logo-arrows" aria-hidden="true">
         <b>➜</b>
         <b>➜</b>

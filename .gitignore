@@ -8,3 +8,18 @@ out/
 coverage/
 backend/supabase/.temp/
 backend/supabase/.branches/
+
+# Local history, logs, editor settings, and credential files
+.Rhistory
+.RData
+.Ruserdata
+*.log
+*.pem
+*.key
+*.p12
+*.pfx
+.aws/
+.codex/
+.agents/
+.vscode/
+.idea/

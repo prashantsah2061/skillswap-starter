@@ -1,4 +1,2 @@
-import { AuthScreen } from "@/components/demo/auth-screen";
-export default function Page() {
-  return <AuthScreen mode="reset" />;
-}
+import { RecoveryScreen } from "@/components/auth/recovery-screen";
+export default function Page() { return <RecoveryScreen />; }

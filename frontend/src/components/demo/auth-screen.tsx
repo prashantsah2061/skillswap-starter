@@ -11,16 +11,16 @@ export function AuthScreen({ mode }: { mode: "login" | "signup" | "reset" }) {
     e.preventDefault();
     setMessage(
       reset
-        ? "Demo only: no reset email was sent. Use Try demo to explore."
+        ? "Password reset is not connected yet. No reset email was sent."
         : signup
           ? "Your form is valid. This is a frontend demo; no account was created and no password was saved."
-          : "This is a frontend demo. Your credentials were not checked or saved. Choose Try demo to explore.",
+          : "Please use the login page to sign in.",
     );
     e.currentTarget.reset();
   }
   return (
     <>
-      <Logo />
+      <Logo href="/login" />
       <section className="auth-card card">
         <h1>
           {reset
@@ -107,7 +107,7 @@ export function AuthScreen({ mode }: { mode: "login" | "signup" | "reset" }) {
         )}
         <p className="auth-footer">
           {signup
-            ? "Already exploring? "
+            ? "Already have an account? "
             : reset
               ? "Remember your password? "
               : "New to SkillSwap? "}
@@ -115,12 +115,6 @@ export function AuthScreen({ mode }: { mode: "login" | "signup" | "reset" }) {
             {signup || reset ? "Sign in" : "Create an account"}
           </Link>
         </p>
-        <Link className="button lime full" href="/explore">
-          Try demo <span>→</span>
-        </Link>
-        <small className="demo-caption">
-          Frontend demo · No account needed
-        </small>
       </section>
     </>
   );

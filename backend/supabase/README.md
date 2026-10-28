@@ -31,3 +31,7 @@ Auth manages credentials separately in auth.users.
 Swipes and matches deliberately cannot be written by normal clients yet. Implement
 and test the atomic matching function described in docs/04-BUILD-ORDER.md before
 connecting the swipe buttons. Do not fix the restriction by granting broad writes.
+
+## Private account profiles (authentication review)
+
+The additive `202610280001_private_account_profiles.sql` migration is independent of the original starter schema. Apply it once to enable the actual account profile/name flow. It creates a separate owner-only `account_profiles` table with no email or password columns, initializes names from the Auth user ID, preserves edited names, and checks live sessions and MFA in RLS. The old `profiles` table above remains a proposed member-directory schema and is not used for private account profile edits. See `docs/AUTHENTICATION-REVIEW.md` at the repository root for the required Auth settings and test status.
