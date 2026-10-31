@@ -1,288 +1,381 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { partners, categories } from "@/lib/frontend-data";
-import { useDemo } from "./demo-provider";
-import { Badge, Photo, Dialog } from "./ui";
+import { community, useDemo } from "./demo-provider";
+import type { Member, Conversation } from "@/lib/community/types";
+import { AnimatePresence } from "motion/react";
+import { Photo, Badge, Dialog } from "./ui";
+import { MatchBurst, Reveal, SwipeCard } from "@/components/ui/motion";
 export function Discovery({ initialSkill = "" }: { initialSkill?: string }) {
-  const { data, update } = useDemo();
-  const [learningChoice, setLearning] = useState<string | null>(null);
-  const [teachingChoice, setTeaching] = useState<string | null>(null);
-  const learning =
-    learningChoice ?? (initialSkill || data.profile.learns[0] || "");
-  const teaching = teachingChoice ?? (data.profile.teaches[0] || "");
-  const [reviewed, setReviewed] = useState<string[]>([]);
-  const [direction, setDirection] = useState("");
-  const [match, setMatch] = useState<string | null>(null);
-  const start = useRef<number | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-    },
-    [],
-  );
-  const available = partners.filter(
-    (p) =>
-      (!learning || p.teaches.includes(learning)) &&
-      (!teaching || p.learns.includes(teaching)) &&
-      !reviewed.includes(p.id),
-  );
-  const p = available[0];
-  function decide(interested: boolean) {
-    if (!p || direction) return;
-    setDirection(interested ? "right" : "left");
-    timer.current = setTimeout(() => {
-      setReviewed((r) => [...r, p.id]);
-      setDirection("");
-      if (interested && p.mutual) {
-        update((d) => ({
-          ...d,
-          matches: Array.from(new Set([...d.matches, p.id])),
-        }));
-        setMatch(p.id);
+  const { data, refresh } = useDemo();
+  const [skill, setSkill] = useState(
+      data.skills.find(
+        (s) => s.name.toLowerCase() === initialSkill.toLowerCase(),
+      )?.id || "",
+    ),
+    [learning, setLearning] = useState(""),
+    [category, setCategory] = useState(""),
+    [city, setCity] = useState(""),
+    [search, setSearch] = useState("");
+  const [members, setMembers] = useState<Member[]>([]),
+    [loading, setLoading] = useState(true),
+    [error, setError] = useState(""),
+    [more, setMore] = useState(false),
+    [busy, setBusy] = useState(false),
+    [match, setMatch] = useState(""),
+    // Kept after a decision so the removed card knows which way to leave.
+    [direction, setDirection] = useState(0),
+    [pending, setPending] = useState("");
+  const filters = { op: "discover", skill, learning, category, city, search };
+  useEffect(() => {
+    let live = true;
+    const timer = setTimeout(() => {
+      setLoading(true);
+      community<Member[]>({
+        op: "discover",
+        skill,
+        learning,
+        category,
+        city,
+        search,
+      })
+        .then((rows) => {
+          if (live) {
+            setDirection(0);
+            setMembers(rows);
+            setMore(rows.length === 24);
+            setError("");
+          }
+        })
+        .catch((e) => {
+          if (live) setError(e.message);
+        })
+        .finally(() => {
+          if (live) setLoading(false);
+        });
+    }, 250);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [skill, learning, category, city, search]);
+  async function loadMore() {
+    setLoading(true);
+    try {
+      const rows = await community<Member[]>({
+        ...filters,
+        after: members.at(-1)?.id || "",
+      });
+      setMembers((old) => [...old, ...rows]);
+      setMore(rows.length === 24);
+      setError("");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+  const p = members[0];
+  async function decide(interested: boolean) {
+    if (!p || busy) return;
+    setBusy(true);
+    setDirection(interested ? 1 : -1);
+    setPending(p.id);
+    setError("");
+    try {
+      const id = await community<string | null>(
+        { op: "swipe", target: p.id, decision: interested ? "like" : "pass" },
+        true,
+      );
+      setMembers((old) => old.filter((x) => x.id !== p.id));
+      if (id) {
+        setMatch(id);
+        await refresh();
       }
-    }, 280);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+      setPending("");
+    }
   }
   return (
     <>
       <div className="discovery-heading">
         <span className="eyebrow">BETTER TOGETHER</span>
         <h1>Meet your next skill partner</h1>
-        <p className="subtitle">
-          Swipe right to connect. Swipe left to keep exploring.
-        </p>
+        <p className="subtitle">Teach what you know. Learn something new.</p>
         <div className="discovery-filters">
-          <label className="chip selected">
-            Learning:{" "}
-            <select
-              aria-label="Learning filter"
-              value={learning}
-              onChange={(e) => {
-                setLearning(e.target.value);
-                setReviewed([]);
-              }}
-            >
-              <option value="">Any skill</option>
-              {categories
-                .flatMap((c) => c.skills)
-                .map((s) => (
-                  <option key={s}>{s}</option>
-                ))}
-            </select>
-          </label>
           <label className="chip">
-            Teaching:{" "}
-            <select
-              aria-label="Teaching filter"
-              value={teaching}
-              onChange={(e) => {
-                setTeaching(e.target.value);
-                setReviewed([]);
-              }}
-            >
+            Learning
+            <select value={skill} onChange={(e) => setSkill(e.target.value)}>
               <option value="">Any skill</option>
-              {data.profile.teaches.map((s) => (
-                <option key={s}>{s}</option>
+              {data.skills.map((s) => (
+                <option value={s.id} key={s.id}>
+                  {s.name}
+                </option>
               ))}
             </select>
           </label>
+          <label className="chip">
+            Teaching
+            <select
+              value={learning}
+              onChange={(e) => setLearning(e.target.value)}
+            >
+              <option value="">Any skill</option>
+              {data.skills.map((s) => (
+                <option value={s.id} key={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="chip">
+            Category
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              <option value="">All fields</option>
+              {data.categories.map((c) => (
+                <option value={c.id} key={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <input
+            aria-label="Search members"
+            placeholder="Search names or bio"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <input
+            aria-label="Location"
+            placeholder="City"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+          />
         </div>
       </div>
+      {error && (
+        <p role="alert">
+          {error}
+          <button onClick={() => loadMore()}>Retry</button>
+        </p>
+      )}
+      {loading && <p role="status">Loading members…</p>}
       <div className="discovery-layout">
-        <aside className="swap-intro card">
+        <Reveal as="aside" className="swap-intro card">
           <h2>A swap goes both ways</h2>
-          <p>
-            Teach what you know.
-            <br />
-            Learn what you’re curious about.
-            <br />
-            Grow a little, together.
-          </p>
-          <div className="swap-skill blue">
-            <span>✦</span>
-            <div>
-              You teach
-              <strong>
-                {teaching || data.profile.teaches.join(", ") || "Add a skill"}
-              </strong>
-            </div>
-          </div>
-          <div className="swap-arrows">
-            ➜<br />
-            <b>⟵</b>
-          </div>
-          <div className="swap-skill green">
-            <span>⌘</span>
-            <div>
-              You learn
-              <strong>
-                {learning || data.profile.learns.join(", ") || "Choose a skill"}
-              </strong>
-            </div>
-          </div>
+          <p>Share your experience and explore every field.</p>
           <Link className="text-button" href="/profile">
             Edit your skills →
           </Link>
-        </aside>
+          <Link className="text-button" href="/matches">
+            Your matches →
+          </Link>
+        </Reveal>
         <div className="profile-stack">
-          {p ? (
+          {p && (
             <>
               <div className="stack-back one" />
               <div className="stack-back two" />
-              <article
-                className={`partner-card card ${direction}`}
-                onTouchStart={(e) => {
-                  start.current = e.touches[0].clientX;
-                }}
-                onTouchEnd={(e) => {
-                  if (start.current !== null) {
-                    const delta = e.changedTouches[0].clientX - start.current;
-                    if (Math.abs(delta) > 65) decide(delta > 0);
-                    start.current = null;
-                  }
-                }}
+            </>
+          )}
+          <AnimatePresence mode="popLayout" custom={direction}>
+            {p && (
+              <SwipeCard
+                key={p.id}
+                className="partner-card card"
+                direction={direction}
+                pending={pending === p.id}
+                disabled={busy}
+                onSwipe={(right) => void decide(right)}
               >
                 <Photo
-                  photo={p.photo}
-                  alt={`${p.name}, fictional demo partner`}
+                  photo=""
+                  alt={p.display_name}
                   className="partner-photo"
                 />
                 <div className="partner-body">
-                  <h2>{p.name}</h2>
-                  <p className="location">⌖ &nbsp; {p.city}</p>
+                  <h2>
+                    <Link href={`/users/${p.id}`} draggable={false}>
+                      {p.display_name}
+                    </Link>
+                  </h2>
+                  <p className="location">{p.city}</p>
                   <p>{p.bio}</p>
                   <div className="partner-skills">
-                    <div>
-                      <strong>Can teach you</strong>
-                      <div>
-                        {p.teaches.map((s) => (
-                          <Badge key={s}>{s}</Badge>
-                        ))}
+                    {(["teach", "learn"] as const).map((d) => (
+                      <div key={d}>
+                        <strong>
+                          {d === "teach" ? "Can teach" : "Wants to learn"}
+                        </strong>
+                        <div>
+                          {p.user_skills
+                            ?.filter((s) => s.direction === d)
+                            .map((s) => (
+                              <Badge
+                                key={s.skill_id}
+                                tone={d === "teach" ? "blue" : "mint"}
+                              >
+                                {
+                                  data.skills.find((k) => k.id === s.skill_id)
+                                    ?.name
+                                }{" "}
+                                · {s.level}
+                              </Badge>
+                            ))}
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <strong>Wants to learn</strong>
-                      <div>
-                        {p.learns.map((s) => (
-                          <Badge tone="mint" key={s}>
-                            {s}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
+                    ))}
                   </div>
                   <div className="decision-buttons">
-                    <button
-                      onClick={() => decide(false)}
-                      disabled={!!direction}
-                    >
-                      <span aria-hidden="true">×</span>Pass
+                    <button disabled={busy} onClick={() => decide(false)}>
+                      × Pass
                     </button>
-                    <button onClick={() => decide(true)} disabled={!!direction}>
-                      <span aria-hidden="true">♥</span>Interested
+                    <button disabled={busy} onClick={() => decide(true)}>
+                      ♥ Interested
                     </button>
                   </div>
                 </div>
-              </article>
-            </>
-          ) : (
+              </SwipeCard>
+            )}
+          </AnimatePresence>
+          {!p && !loading && !error && (
             <div className="card empty">
-              <span className="empty-symbol">✦</span>
-              <h2>
-                {reviewed.length
-                  ? "You’re all caught up!"
-                  : "No partners for this combination"}
-              </h2>
+              <h2>No more members for these filters</h2>
               <p>
-                Try a different skill pairing or revisit these demo profiles.
+                Try other skills or locations, or invite someone to join
+                SkillSwap.
               </p>
               <button
                 className="button"
                 onClick={() => {
-                  setReviewed([]);
+                  setSkill("");
                   setLearning("");
-                  setTeaching("");
+                  setCategory("");
+                  setCity("");
+                  setSearch("");
                 }}
               >
-                Explore all partners
+                Clear filters
               </button>
-              <Link className="text-button" href="/matches">
-                View your matches →
-              </Link>
             </div>
           )}
-          <p className="demo-caption">
-            ⓘ Fictional profiles. Mutual interest is predefined for this demo.
-          </p>
+          {more && (
+            <button className="button" disabled={loading} onClick={loadMore}>
+              Load more members
+            </button>
+          )}
         </div>
       </div>
-      {match && (
-        <Dialog title="It’s a skill match!" onClose={() => setMatch(null)}>
-          <div className="match-symbol">↔</div>
-          <p>
-            You and {partners.find((p) => p.id === match)?.name} can learn from
-            each other.
-          </p>
-          <p className="muted">
-            This match uses predefined demo interest. No real person was
-            notified.
-          </p>
-          <Link className="button lime full" href={`/messages/${match}`}>
-            Start a demo conversation →
-          </Link>
-          <button className="text-button full" onClick={() => setMatch(null)}>
-            Keep exploring
-          </button>
-        </Dialog>
-      )}
+      <AnimatePresence>
+        {match && (
+          <Dialog
+            title="It’s a skill match!"
+            icon={<MatchBurst />}
+            onClose={() => setMatch("")}
+          >
+            <p>You both expressed interest. Start your conversation.</p>
+            <Link className="button lime" href={`/messages/${match}`}>
+              Open conversation →
+            </Link>
+          </Dialog>
+        )}
+      </AnimatePresence>
     </>
   );
 }
 export function Matches() {
-  const { data } = useDemo();
-  const matched = partners.filter((p) => data.matches.includes(p.id));
+  const [rows, setRows] = useState<Conversation[]>([]),
+    [error, setError] = useState(""),
+    [loading, setLoading] = useState(true),
+    [more, setMore] = useState(false);
+  useEffect(() => {
+    let live = true;
+    community<Conversation[]>({ op: "conversations" })
+      .then((r) => {
+        if (live) {
+          setRows(r);
+          setMore(r.length === 24);
+        }
+      })
+      .catch((e) => {
+        if (live) setError(e.message);
+      })
+      .finally(() => {
+        if (live) setLoading(false);
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
+  async function load() {
+    setLoading(true);
+    try {
+      const r = await community<Conversation[]>({
+        op: "conversations",
+        offset: String(rows.length),
+      });
+      setRows((old) => [...old, ...r]);
+      setMore(r.length === 24);
+      setError("");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
   return (
     <>
       <div className="heading-row">
         <div>
           <p className="eyebrow">YOUR LEARNING CIRCLE</p>
           <h1>Your matches</h1>
-          <p className="subtitle">Good things start with a shared curiosity.</p>
         </div>
-        <Link className="button lime" href="/discover">
+        <Link href="/discover" className="button lime">
           Find a partner →
         </Link>
       </div>
+      {loading && <p>Loading matches…</p>}
+      {error && (
+        <p role="alert">
+          {error}
+          <button onClick={load}>Retry</button>
+        </p>
+      )}
       <div className="matches-grid">
-        {matched.map((p) => (
-          <article key={p.id} className="card match-card">
-            <Photo photo={p.photo} alt={p.name} />
+        {rows.map((r, index) => (
+          <Reveal as="article" className="card match-card" key={r.id} index={index} lift>
+            <Photo photo="" alt={r.member?.display_name || ""} />
             <div>
-              <Badge tone="mint">Demo match</Badge>
-              <h2>{p.name}</h2>
-              <p className="muted">{p.city}</p>
-              <p>{p.bio}</p>
-              <div>
-                {p.teaches.map((s) => (
-                  <Badge key={s}>{s}</Badge>
-                ))}
-              </div>
-              <Link className="button full" href={`/messages/${p.id}`}>
+              <Badge tone="mint">Mutual match</Badge>
+              <h2>{r.member?.display_name}</h2>
+              <p>{r.member?.city}</p>
+              <p>{r.member?.bio}</p>
+              <Link href={`/messages/${r.id}`} className="button full">
                 Open conversation →
               </Link>
+              <Link href={`/users/${r.member?.id}`} className="text-button">
+                View profile
+              </Link>
             </div>
-          </article>
+          </Reveal>
         ))}
       </div>
-      {!matched.length && (
+      {!loading && !error && !rows.length && (
         <div className="card empty">
-          <h2>Your next connection is waiting</h2>
-          <p>Show interest in a partner to try a demo match.</p>
-          <Link className="button" href="/discover">
-            Discover partners
-          </Link>
+          <h2>No matches yet</h2>
+          <p>A match appears when you both like each other.</p>
         </div>
+      )}
+      {more && (
+        <button disabled={loading} onClick={load}>
+          Load more matches
+        </button>
       )}
     </>
   );

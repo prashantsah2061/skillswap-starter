@@ -8,5 +8,5 @@ export default async function Page({
   await requireUser();
 
   const { matchId } = await params;
-  return <Messages selectedId={matchId} />;
+  return <Messages key={matchId} selectedId={matchId} />;
 }

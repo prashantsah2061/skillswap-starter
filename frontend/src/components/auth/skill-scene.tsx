@@ -19,8 +19,8 @@ function SharingLine({ first, second, quiet }: { first: NodePosition; second: No
   return <svg className="community-sharing" aria-hidden="true"><motion.path data-sharing-line d={path} fill="none" stroke="#d5c4ff" strokeWidth="2" strokeDasharray={quiet ? undefined : "5 5"} /></svg>;
 }
 
-function CommunityNode({ index, skill, position, size, reset, quiet, selected, connected, register, hover, focus, drag, connect, drop }: {
-  index: number; skill: CommunitySkill; position: { x: number; y: number }; size: { width: number; height: number }; reset: number; quiet: boolean; selected: boolean; connected: boolean;
+function CommunityNode({ index, skill, position, size, reset, quiet, surge, selected, connected, register, hover, focus, drag, connect, drop }: {
+  index: number; skill: CommunitySkill; position: { x: number; y: number }; size: { width: number; height: number }; reset: number; quiet: boolean; surge: boolean; selected: boolean; connected: boolean;
   register: (index: number, node: NodePosition | null) => void; hover: (index: number | null) => void; focus: (index: number | null) => void; drag: (index: number | null) => void; connect: (index: number) => void; drop: (index: number) => void;
 }) {
   const reduced = useReducedEffects();
@@ -47,6 +47,16 @@ function CommunityNode({ index, skill, position, size, reset, quiet, selected, c
     const t = progress.get(), start = size.height*.5, end = baseY+y.get();
     return start+(end-start)*t*t;
   });
+  // On sign-in, every card sends one pulse down its wire into the hub.
+  const surgeProgress = useMotionValue(0);
+  useEffect(() => {
+    if (!surge) { surgeProgress.set(0); return; }
+    const animation = animate(surgeProgress, 1, { duration: .55, delay: index*.05, ease: "easeIn" });
+    return () => animation.stop();
+  }, [surge, surgeProgress, index]);
+  const surgeX = useTransform(() => { const end = baseX+x.get(); return end+(size.width*.5-end)*surgeProgress.get(); });
+  const surgeY = useTransform(() => { const end = baseY+y.get(); return end+(size.height*.5-end)*surgeProgress.get(); });
+  const surgeOpacity = useTransform(surgeProgress, [0,.08,.92,1], [0,1,1,0]);
   function move(event: KeyboardEvent<HTMLButtonElement>) {
     const step = event.shiftKey ? 30 : 12;
     const delta: Record<string, [number,number]> = { ArrowLeft: [-step,0], ArrowRight: [step,0], ArrowUp: [0,-step], ArrowDown: [0,step] };
@@ -57,9 +67,9 @@ function CommunityNode({ index, skill, position, size, reset, quiet, selected, c
     y.set(Math.max(bounds.top, Math.min(bounds.bottom, y.get()+delta[event.key][1])));
   }
   return <>
-    <svg className="community-wire" aria-hidden="true"><motion.path data-community-line={index} d={path} fill="none" stroke={skill.color} strokeWidth="1.2" opacity=".35" />{!quiet && !reduced && <motion.circle cx={signalX} cy={signalY} r="2.6" fill={skill.color} className="community-signal" />}</svg>
+    <svg className="community-wire" aria-hidden="true"><motion.path data-community-line={index} d={path} fill="none" stroke={skill.color} strokeWidth="1.2" opacity=".35" />{!quiet && !reduced && <motion.circle cx={signalX} cy={signalY} r="2.6" fill={skill.color} className="community-signal" />}{surge && <motion.circle cx={surgeX} cy={surgeY} r="5" fill={skill.color} opacity={surgeOpacity} className="community-surge" />}</svg>
     <div className={`community-anchor ${selected || connected ? "is-highlighted" : ""}`} style={{ left: `${position.x*100}%`, top: `${position.y*100}%` }}>
-      <motion.button type="button" data-community-card={index} data-avatar={skill.id} className={`community-card ${selected ? "is-selected" : ""} ${connected ? "is-connected" : ""}`} aria-label={`${skill.name}, ${skill.category}. Drag toward another card, or select two cards to make an example connection.`} aria-pressed={selected} aria-describedby="community-instructions" style={{ x, y, width, height, marginLeft: -width/2, marginTop: -height/2, "--avatar-accent": skill.color } as MotionStyle & { "--avatar-accent": string }} drag dragConstraints={bounds} dragElastic={0} dragMomentum={false}
+      <motion.button type="button" data-community-card={index} data-avatar={skill.id} className={`community-card ${selected ? "is-selected" : ""} ${connected ? "is-connected" : ""}`} aria-label={`${skill.name}, ${skill.category}. Drag toward another card, or select two cards to make an example connection.`} aria-pressed={selected} aria-describedby="community-instructions" style={{ x, y, width, height, marginLeft: -width/2, marginTop: -height/2, "--avatar-accent": skill.color } as MotionStyle & { "--avatar-accent": string }} drag dragConstraints={bounds} dragElastic={0} dragMomentum={false} animate={surge ? { scale: [1,1.05,1], transition: { duration: .5, delay: index*.05 } } : undefined}
         onPointerEnter={()=>hover(index)} onPointerLeave={()=>hover(null)} onFocus={()=>focus(index)} onBlur={()=>focus(null)} onKeyDown={move}
         onDragStart={()=>{drag(index); suppressClick.current=Infinity;}} onDragEnd={()=>{drag(null); suppressClick.current=Date.now()+300;drop(index);}} onClick={()=>{if(Date.now()>suppressClick.current)connect(index);}}>
         <AnimatePresence mode="wait" initial={false}><motion.div className="community-card-content" key={skill.id} initial={{ opacity: 0, y: reduced ? 0 : 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: reduced ? 0 : -5 }} transition={{ duration: reduced ? .1 : .35 }}>
@@ -70,7 +80,7 @@ function CommunityNode({ index, skill, position, size, reset, quiet, selected, c
   </>;
 }
 
-export function SkillScene() {
+export function SkillScene({ activity = "idle" }: { activity?: "idle" | "typing" | "loading" | "success" | "error" }) {
   const reduced = useReducedEffects();
   const scene = useRef<HTMLDivElement>(null), nodes = useRef(new Map<number, NodePosition>());
   const nextSkill = useRef(7), nextSlot = useRef(0);
@@ -84,6 +94,7 @@ export function SkillScene() {
   const slots = compact ? compactSlots : desktopSlots;
   const interacting = hovered !== null || focused !== null || dragging !== null || selected !== null || pair !== null;
   const quiet = paused || reduced || !inView || !tabVisible;
+  const surge = activity === "success" && !quiet;
   const register = useCallback((index: number, node: NodePosition | null) => { if (node) nodes.current.set(index,node); else nodes.current.delete(index); }, []);
   useEffect(() => {
     const element = scene.current; if (!element) return;
@@ -129,13 +140,14 @@ export function SkillScene() {
     for(const [other,node] of nodes.current){if(other===index || other>=slots.length)continue;const d=Math.hypot(first.baseX+first.x.get()-node.baseX-node.x.get(),first.baseY+first.y.get()-node.baseY-node.y.get());if(d<distance){nearest=other;distance=d;}}
     if(nearest>=0 && distance<(compact?100:140))join(index,nearest);
   }
-  return <div className={`network-block community-network ${compact ? "community-is-compact" : ""} ${quiet ? "community-is-quiet" : ""}`}>
+  return <div className={`network-block community-network scene-${activity} ${compact ? "community-is-compact" : ""} ${quiet ? "community-is-quiet" : ""}`}>
     <div className="community-toolbar"><div><span className="community-presence" /> A WORLD OF SKILLS<span className="community-toolbar-sub">Everyone has something to share</span></div><div className="community-controls"><button type="button" onClick={()=>setPaused(p=>!p)} aria-label={paused ? "Play community animations" : "Pause community animations"}>{paused ? <Play size={12} /> : <Pause size={12} />}</button><button type="button" onClick={()=>{setReset(r=>r+1);setPair(null);setSelected(null);}} aria-label="Reset community cards"><RotateCcw size={12} /></button></div></div>
     <div className="skill-scene community-scene" ref={scene} role="group" aria-label="Illustrated community of skills">
       <div className="community-orbit" aria-hidden="true" /><div className="community-orbit community-orbit-inner" aria-hidden="true" />
-      {slots.map((position,index)=><CommunityNode key={index} index={index} skill={communitySkills[lineup[index]]} position={position} size={size} reset={reset} quiet={quiet} selected={selected===index} connected={pair?.from===index||pair?.to===index} register={register} hover={setHovered} focus={setFocused} drag={setDragging} connect={connect} drop={drop} />)}
+      {slots.map((position,index)=><CommunityNode key={index} index={index} skill={communitySkills[lineup[index]]} position={position} size={size} reset={reset} quiet={quiet} surge={surge} selected={selected===index} connected={pair?.from===index||pair?.to===index} register={register} hover={setHovered} focus={setFocused} drag={setDragging} connect={connect} drop={drop} />)}
       {pair && linkNodes && <SharingLine first={linkNodes.first} second={linkNodes.second} quiet={quiet} />}
-      <div className="community-center" aria-hidden="true"><ArrowLeftRight size={27} /><span>SkillSwap</span><small>BETTER TOGETHER</small></div>
+      {surge && <motion.div className="community-shock" aria-hidden="true" style={{ x: "-50%", y: "-50%" }} initial={{ scale: .6, opacity: 0 }} animate={{ scale: 6, opacity: [0,.65,0] }} transition={{ duration: .85, delay: .45, ease: "easeOut" }} />}
+      <motion.div className="community-center" aria-hidden="true" style={{ x: "-50%", y: "-50%" }} animate={surge ? { scale: [1,1,1.3,1], transition: { duration: 1, times: [0,.45,.65,1] } } : undefined}><motion.span className="community-center-icon" animate={activity === "loading" && !quiet ? { rotate: 360 } : { rotate: 0 }} transition={activity === "loading" && !quiet ? { duration: 1.1, repeat: Infinity, ease: "easeInOut" } : { duration: 0 }}><ArrowLeftRight size={27} /></motion.span><span>SkillSwap</span><small>BETTER TOGETHER</small></motion.div>
     </div>
     <div className="community-feedback" id="community-instructions" role="status" aria-live="polite"><AnimatePresence mode="wait" initial={false}>{pair ? <motion.div key="connected" className="community-connection-message" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><span>{pair.label}</span><strong>You teach. I learn. We grow together.</strong><button type="button" aria-label="Clear example connection" onClick={()=>setPair(null)}><X size={13} /></button></motion.div> : <motion.p key={selected === null ? "hint" : "select"} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>{selected === null ? <><Hand size={12} /> Drag two skills together, or select a pair.</> : <>Now choose a skill to connect with {communitySkills[lineup[selected]].name}.</>}</motion.p>}</AnimatePresence></div>
     <p className="community-disclaimer">Illustrated community · connections are examples, not real matches.</p>

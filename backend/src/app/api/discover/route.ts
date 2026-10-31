@@ -1,2 +1,2 @@
-import { notImplemented } from "@/lib/api/not-implemented";
-export async function GET(){return notImplemented("GET /api/discover")}
+import {readOperation} from "../../../../../shared/server/legacy-routes";
+export async function GET(req:Request){return readOperation(req,"discover")}

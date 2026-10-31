@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { emailSchema, registrationSchema } from "./validation";
 import { checkNewPassword } from "./password-policy";
-import { appOrigin, checkActionOrigin } from "./origin";
+import { appOrigin, checkActionOrigin, AuthOriginError } from "./origin";
 import { verifiedSession, mfaRequired } from "./session";
 import { rememberCookie } from "@/lib/supabase/session-preference";
 
@@ -106,11 +106,15 @@ export async function logoutAction() {
 }
 
 export async function googleAction(remember = true) {
-  await checkActionOrigin();
   try {
+    await checkActionOrigin();
     (await cookies()).set(rememberCookie, remember ? "1" : "0", { path: "/", sameSite: "lax", secure: (await appOrigin()).startsWith("https:"), ...(remember ? { maxAge: 31536000 } : {}) });
     const supabase = await createClient();
     const { data, error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${await appOrigin()}/auth/callback`, skipBrowserRedirect: true } });
     return error || !data.url ? { error: "Google sign-in is unavailable." } : { error: null, url: data.url };
-  } catch { return { error: "Google sign-in is unavailable." }; }
+  } catch (error) {
+    // Only a safe category is returned; never include provider messages or keys.
+    const code = error instanceof AuthOriginError ? "AUTH_ORIGIN" : "AUTH_CONFIGURATION";
+    return { error: `Google sign-in is unavailable (${code}). Please check the deployment settings.` };
+  }
 }

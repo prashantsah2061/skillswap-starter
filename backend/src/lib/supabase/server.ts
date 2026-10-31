@@ -10,13 +10,22 @@ export async function createClient() {
   const { url, key } = getSupabaseConfig();
 
   return createServerClient(url, key, {
+    cookieOptions: {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.APP_ORIGIN
+        ? process.env.APP_ORIGIN.startsWith("https:")
+        : process.env.NODE_ENV === "production",
+    },
     cookies: {
       getAll() {
         return store.getAll();
       },
       setAll(values) {
         try {
-          values.forEach(({ name, value, options }) => store.set(name, value, options));
+          values.forEach(({ name, value, options }) =>
+            store.set(name, value, options),
+          );
         } catch {
           // Server Components cannot write cookies. The proxy refreshes the
           // session before rendering and forwards cookies to the browser.

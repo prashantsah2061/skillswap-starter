@@ -1,27 +1,48 @@
-/* Shared SkillSwap palette, based on the animated login. */
+/* Midnight Purple + Electric Blue: shared SkillSwap palette. */
 :root {
   color-scheme: dark;
-  --page-bg: #080f27;
-  --surface: #17213c;
-  --surface-raised: #202c4e;
-  --surface-input: #10192f;
-  --text-primary: #f5f6ff;
-  --text-secondary: #a5b0cc;
-  --text-subtle: #8d9fc2;
-  --line: #b9c9ff25;
-  --primary: #675aff;
-  --primary-hover: #796cff;
-  --accent-violet: #b9a5ff;
-  --accent-blue: #78c7ff;
-  --accent-cyan: #66e4d3;
-  --soft-violet: #302853;
-  --soft-blue: #1c3454;
-  --soft-cyan: #163c42;
+  --page-bg: #0B1020;
+  --surface: #151B30;
+  --surface-raised: #1E2640;
+  --surface-input: #0F1528;
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-subtle: #94A3B8;
+  --line: #94A3B826;
+  --primary: #8B5CF6;
+  --primary-hover: #9D74F8;
+  --on-primary: #0B1020;
+  /* Lighter tints of the palette, for text that sits on dark surfaces. */
+  --accent-violet: #A78BFA;
+  --accent-blue: #60A5FA;
+  --accent-cyan: #22D3EE;
+  --soft-violet: #2A2352;
+  --soft-blue: #172A4F;
+  --soft-cyan: #0F3540;
   --danger: #ffbfd1;
   --danger-bg: #392139;
   --danger-line: #d1778e50;
-  --brand-gradient: linear-gradient(110deg, #9255ed, #675aff 48%, #308be9);
-  --panel-gradient: linear-gradient(145deg, #27314bcc, #171f39ed 65%, #21233ded);
-  --page-gradient: radial-gradient(ellipse at 8% 25%, #163d6a60, transparent 60%), radial-gradient(ellipse at 95% 0%, #42277a50, transparent 55%);
-  --panel-shadow: 0 14px 40px #02061535;
+  --brand-gradient: linear-gradient(110deg, #8B5CF6, #3B82F6);
+  --panel-gradient: linear-gradient(145deg, #1E2640cc, #151B30ed 65%, #1B1F3Eed);
+  --page-gradient: radial-gradient(ellipse at 8% 25%, #3B82F630, transparent 60%), radial-gradient(ellipse at 95% 0%, #8B5CF630, transparent 55%);
+  --panel-shadow: 0 14px 40px #05081235;
 }
+
+.member-avatar { display:inline-flex; align-items:center; justify-content:center; width:64px; height:64px; flex-shrink:0; border-radius:50%; background:#e6ebf1; color:#232d4b; font-size:28px; font-weight:600; }
+.member-avatar.partner-photo {width:100%;height:170px;border-radius:22px 22px 0 0;font-size:68px;}
+.member-avatar:not(.partner-photo) {object-fit:contain;}
+.message {white-space:pre-wrap;overflow-wrap:anywhere;}
+.discovery-filters {flex-wrap:wrap;}
+.discovery-filters input {max-width:100%;}
+.session-card {overflow-wrap:anywhere;}
+@media(max-width:640px){.message-header{flex-wrap:wrap;}.decision-buttons{flex-wrap:wrap;}.editable-skills{flex-wrap:wrap;}}
+.avatar-menu .member-avatar {width:36px;height:36px;font-size:16px;}
+.conversation .member-avatar,.message-header .member-avatar {width:44px;height:44px;font-size:20px;}
+.profile-preview > .member-avatar {width:120px;height:120px;font-size:48px;margin:0 auto 18px;}
+/* Keeps a card swiped off-screen from adding a horizontal scrollbar. */
+.discovery-layout {overflow-x:clip;}
+.typing-dots {display:inline-flex;align-items:center;gap:4px;height:1.5em;}
+.typing-dots span {width:6px;height:6px;border-radius:50%;background:var(--text-secondary);}
+.match-burst {position:relative;display:grid;place-items:center;width:64px;height:64px;margin:0 auto 10px;}
+.match-burst b {font-size:44px;font-weight:400;line-height:1;color:var(--accent-violet);}
+.match-burst i {position:absolute;width:7px;height:7px;border-radius:50%;background:var(--accent-cyan);}

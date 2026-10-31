@@ -1,45 +1,45 @@
 "use client";
 import { useState, type FormEvent } from "react";
-import { categories, type DemoProfile } from "@/lib/frontend-data";
-import { useDemo } from "./demo-provider";
+import { useDemo, community } from "./demo-provider";
 import { useAccount } from "@/components/auth/account-provider";
-import { saveProfileAction } from "@/lib/profile/actions";
+import type { Selection } from "@/lib/community/types";
 import { Photo, Badge } from "./ui";
 export function Profile() {
-  const account = useAccount();
-  const [saving, setSaving] = useState(false);
-  const { data, update, storageWarning } = useDemo();
-  const [draft, setDraft] = useState<DemoProfile | null>(null);
-  const [notice, setNotice] = useState("");
-  const profile = draft || { ...data.profile, name: account.name, city: account.profile?.city || "", bio: account.profile?.bio || "" };
-  function edit<K extends keyof DemoProfile>(key: K, value: DemoProfile[K]) {
-    setDraft({ ...profile, [key]: value });
-    setNotice("");
-  }
+  const { data, refresh } = useDemo(),
+    account = useAccount();
+  const [name, setName] = useState(data.profile.display_name),
+    [city, setCity] = useState(data.profile.city),
+    [bio, setBio] = useState(data.profile.bio),
+    [visible, setVisible] = useState(data.profile.visible),
+    [selections, setSelections] = useState<Selection[]>(data.selections),
+    [busy, setBusy] = useState(false),
+    [notice, setNotice] = useState("");
   async function save(e: FormEvent) {
     e.preventDefault();
-    if (saving) return;
-    if (!profile.name.trim()) { setNotice("Enter your display name."); return; }
-    setSaving(true);
+    if (busy) return;
+    setBusy(true);
+    setNotice("");
     try {
-      const result = await saveProfileAction({ display_name: profile.name, city: profile.city, bio: profile.bio });
-      if (result.error || !result.profile) { setNotice(result.error || "Profile could not be saved."); return; }
-      account.setProfile(result.profile);
-    update((d) => ({
-      ...d,
-      profile: {
-        ...profile,
-        name: profile.name.trim(),
-        city: profile.city.trim(),
-        bio: profile.bio.trim(),
-      },
-    }));
-    setDraft(null);
-    setNotice(
-      "Profile saved. Your display name is updated across SkillSwap.",
-    );
-    } catch { setNotice("Profile could not be saved. Please try again."); }
-    finally { setSaving(false); }
+      await community(
+        { op: "profile", name, city, bio, visible, selections },
+        true,
+      );
+      await refresh();
+      account.setProfile({
+        user_id: data.userId,
+        display_name: name.trim(),
+        city: city.trim(),
+        bio: bio.trim(),
+      });
+      setName(name.trim());
+      setCity(city.trim());
+      setBio(bio.trim());
+      setNotice("Profile and skills saved.");
+    } catch (e) {
+      setNotice((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
   }
   return (
     <>
@@ -50,45 +50,30 @@ export function Profile() {
       </p>
       <form className="profile-layout" onSubmit={save}>
         <aside className="card profile-preview">
-          <Photo photo={profile.photo} alt="Demo profile photo" />
+          <Photo photo="" alt={name} />
           <Badge tone="mint">Your profile</Badge>
-          <h2>{profile.name}</h2>
-          <p className="muted">⌖ {profile.city}</p>
-          <p>{profile.bio}</p>
-          <label>
-            Choose a placeholder photo
-            <select
-              value={profile.photo}
-              onChange={(e) => edit("photo", e.target.value)}
-            >
-              <option value="alex">Alex</option>
-              <option value="maya">Maya</option>
-              <option value="jordan">Jordan</option>
-            </select>
-          </label>
-          <small className="muted">
-            Reference-based placeholder portraits for this demo.
-          </small>
+          <h2>{name}</h2>
+          <p>{city}</p>
+          <p>{bio}</p>
         </aside>
         <section className="card profile-form">
           <h2>Make yourself known</h2>
-          {!account.profile && <p className="error-feedback">Your profile is temporarily unavailable. Please try again later.</p>}
           <div className="form-grid">
             <label>
               Display name
               <input
                 required
                 maxLength={80}
-                value={profile.name}
-                onChange={(e) => edit("name", e.target.value)}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
               />
             </label>
             <label>
-              City (optional)
+              City
               <input
                 maxLength={80}
-                value={profile.city}
-                onChange={(e) => edit("city", e.target.value)}
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
               />
             </label>
           </div>
@@ -96,81 +81,122 @@ export function Profile() {
             Bio
             <textarea
               maxLength={500}
-              rows={3}
-              value={profile.bio}
-              onChange={(e) => edit("bio", e.target.value)}
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
             />
           </label>
-          {(["teaches", "learns"] as const).map((key) => (
-            <fieldset key={key}>
+          <label>
+            <input
+              type="checkbox"
+              checked={visible}
+              onChange={(e) => setVisible(e.target.checked)}
+            />{" "}
+            Show my profile in discovery (existing matches can still view it)
+          </label>
+          {(["teach", "learn"] as const).map((direction) => (
+            <fieldset key={direction}>
               <legend>
-                {key === "teaches"
+                {direction === "teach"
                   ? "Skills you can teach"
                   : "Skills you want to learn"}
               </legend>
-              <div className="editable-skills">
-                {profile[key].map((s) => (
-                  <span
-                    className={`badge ${key === "teaches" ? "blue" : "mint"}`}
-                    key={s}
-                  >
-                    {s}
-                    <button
-                      type="button"
-                      aria-label={`Remove ${s} from ${key}`}
-                      onClick={() =>
-                        edit(
-                          key,
-                          profile[key].filter((x) => x !== s),
+              {selections
+                .filter((s) => s.direction === direction)
+                .map((s) => (
+                  <div className="editable-skills" key={s.skill_id}>
+                    <Badge>
+                      {data.skills.find((k) => k.id === s.skill_id)?.name}
+                    </Badge>
+                    <select
+                      aria-label="Proficiency"
+                      value={s.level}
+                      onChange={(e) =>
+                        setSelections((old) =>
+                          old.map((x) =>
+                            x === s
+                              ? {
+                                  ...x,
+                                  level: e.target.value as Selection["level"],
+                                }
+                              : x,
+                          ),
                         )
                       }
                     >
-                      ×
+                      {["beginner", "intermediate", "advanced"].map((l) => (
+                        <option key={l}>{l}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelections((old) => old.filter((x) => x !== s))
+                      }
+                    >
+                      Remove
                     </button>
-                  </span>
+                  </div>
                 ))}
-              </div>
               <select
-                aria-label={`Add a skill to ${key}`}
                 value=""
+                aria-label={`Add ${direction} skill`}
                 onChange={(e) => {
                   if (e.target.value)
-                    edit(key, [...profile[key], e.target.value]);
+                    setSelections((old) => [
+                      ...old,
+                      {
+                        skill_id: e.target.value,
+                        direction,
+                        level: "beginner",
+                      },
+                    ]);
                 }}
               >
                 <option value="">+ Add a skill</option>
-                {categories
-                  .flatMap((c) => c.skills)
-                  .filter((s) => !profile[key].includes(s))
-                  .map((s) => (
-                    <option key={s}>{s}</option>
+                {data.skills
+                  .filter(
+                    (k) =>
+                      !selections.some(
+                        (s) => s.skill_id === k.id && s.direction === direction,
+                      ),
+                  )
+                  .map((k) => (
+                    <option key={k.id} value={k.id}>
+                      {k.name}
+                    </option>
                   ))}
               </select>
             </fieldset>
           ))}
-          <div className="profile-save">
-            <button className="button lime" disabled={saving || !account.profile}>{saving ? "Saving…" : "Save profile"}</button>
-            <button
-              type="button"
-              className="text-button"
-              onClick={() => {
-                setDraft(null);
-                setNotice("Changes discarded.");
-              }}
-            >
-              Cancel edits
-            </button>
-          </div>
-          {notice && (
-            <p className="feedback" role="status">
-              {notice}
+          {!data.skills.length && (
+            <p>
+              No skills are available yet. Please check back soon or contact
+              support.
             </p>
           )}
-          <small className="muted">
-            {storageWarning
-              ? "Browser storage is unavailable. Skill and photo preferences last for this visit."
-              : "Your name, city, and bio are saved to your account. Skill and photo preferences stay in this browser."}
-          </small>
+          <button className="button lime" disabled={busy}>
+            {busy
+              ? "Saving…"
+              : data.profile.onboarded
+                ? "Save profile"
+                : "Save profile & complete onboarding"}
+          </button>
+          <button
+            type="button"
+            className="text-button"
+            disabled={busy}
+            onClick={() => {
+              setName(data.profile.display_name);
+              setCity(data.profile.city);
+              setBio(data.profile.bio);
+              setVisible(data.profile.visible);
+              setSelections(data.selections);
+              setNotice("Changes discarded.");
+            }}
+          >
+            Cancel edits
+          </button>
+          {notice && <p role="status">{notice}</p>}
         </section>
       </form>
     </>

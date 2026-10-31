@@ -6,8 +6,23 @@ import { AccountProvider } from "@/components/auth/account-provider";
 import { DemoProvider } from "@/components/demo/demo-provider";
 import { SessionWatch } from "@/components/auth/session-watch";
 import { SiteNav } from "@/components/layout/site-nav";
+import { MotionProvider } from "@/components/ui/motion";
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await requireUser(true);
   const profile = await loadProfile();
-  return <AccountProvider key={user.id} profile={profile} fallback={initialDisplayName(user)}><DemoProvider key={user.id} storageKey={`skillswap-demo-v2-${user.id}`}><SessionWatch /><SiteNav /><main className="shell">{children}</main></DemoProvider></AccountProvider>;
+  return (
+    <AccountProvider
+      key={user.id}
+      profile={profile}
+      fallback={initialDisplayName(user)}
+    >
+      <SessionWatch />
+      <MotionProvider>
+        <SiteNav />
+        <main className="shell">
+          <DemoProvider key={user.id}>{children}</DemoProvider>
+        </main>
+      </MotionProvider>
+    </AccountProvider>
+  );
 }

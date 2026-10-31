@@ -7,7 +7,7 @@ const root = path.resolve(__dirname, '../..');
 const nativeRequire = createRequire(path.join(root, 'package.json'));
 function loadTs(file, mocks = {}, globals = {}) {
   file = path.resolve(root, file);
-  const source = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+  const source = ts.transpileModule(fs.readFileSync(file, 'utf8'), { fileName: file, compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const module = { exports: {} };
   const customRequire = name => {
     if (Object.hasOwn(mocks, name)) return mocks[name];

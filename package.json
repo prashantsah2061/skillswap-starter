@@ -29,10 +29,12 @@
     "start:backend": "npm run start --workspace @skillswap/backend",
     "lint": "eslint frontend backend shared",
     "typecheck": "npm run typecheck --workspaces",
-    "test:auth": "node --test tests/auth/*.test.cjs"
+    "test:auth": "node --test tests/auth/*.test.cjs",
+    "test:community:live": "node --test tests/integration/community-live.test.cjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
-    "@supabase/supabase-js": "^2.118.0"
+    "@supabase/supabase-js": "^2.118.0",
+    "motion": "^14.9.0"
   }
 }

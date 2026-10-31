@@ -8,5 +8,5 @@ export default async function Page({
   await requireUser();
 
   const { sessionId } = await params;
-  return <SessionRoom id={sessionId} />;
+  return <SessionRoom key={sessionId} id={sessionId} />;
 }

@@ -1,2 +1,2 @@
-import { notImplemented } from "@/lib/api/not-implemented";
+import { notImplemented } from "@/lib/auth/api/not-implemented";
 export async function POST(){return notImplemented("POST /api/auth/login")}

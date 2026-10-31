@@ -53,3 +53,9 @@ npm run build:frontend
 No Render account, deployment, database migration, SMTP setting, or paid plan is changed by these commands.
 
 Official references: [Next.js on Render](https://render.com/docs/deploy-nextjs-app), [monorepo support](https://render.com/docs/monorepo-support), [Blueprint environment variables](https://render.com/docs/blueprint-spec#setting-environment-variables).
+
+### Automatic Render origin handling
+
+The app also recognizes Render's automatically supplied `RENDER_EXTERNAL_URL`. A stale localhost APP_ORIGIN is ignored on Render, and the platform HTTPS URL remains an approved origin. Explicit APP_ORIGIN custom domains and the platform domain are both supported without trusting arbitrary Host/Origin headers. Next.js Server Actions allow only those exact configured hosts through a reverse proxy; there are no wildcard deployment hosts. Secure cookies/HSTS also recognize the Render HTTPS environment. Do not manually set RENDER_EXTERNAL_URL to an unrelated domain.
+
+If Google initiation fails before opening Google, the page now reports a safe code: AUTH_ORIGIN for an origin configuration error, or AUTH_CONFIGURATION for unavailable Supabase/client configuration. These codes include no credentials. Supabase URLs/keys must still be set in Render before the build, and its redirect allowlist must include the actual production callback URL.

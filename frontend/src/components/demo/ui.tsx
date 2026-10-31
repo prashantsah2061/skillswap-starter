@@ -2,9 +2,14 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useId, type ReactNode } from "react";
+import { motion } from "motion/react";
 export function Logo({ href = "/explore" }: { href?: string }) {
   return (
-    <Link className="brand" href={href} aria-label={href === "/login" ? "SkillSwap sign in" : "SkillSwap explore"}>
+    <Link
+      className="brand"
+      href={href}
+      aria-label={href === "/login" ? "SkillSwap sign in" : "SkillSwap explore"}
+    >
       <span className="logo-arrows" aria-hidden="true">
         <b>➜</b>
         <b>➜</b>
@@ -50,10 +55,12 @@ export function Search({
 }
 export function Dialog({
   title,
+  icon,
   children,
   onClose,
 }: {
   title: string;
+  icon?: ReactNode;
   children: ReactNode;
   onClose: () => void;
 }) {
@@ -69,11 +76,19 @@ export function Dialog({
     };
   }, []);
   return (
-    <dialog
+    <motion.dialog
       ref={ref}
       className="dialog"
       aria-labelledby={titleId}
-      onCancel={onClose}
+      initial={{ opacity: 0, scale: 0.96, y: 10 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.98, y: 6 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      onCancel={(e) => {
+        // Escape would otherwise close the dialog before its exit animation.
+        e.preventDefault();
+        onClose();
+      }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -81,9 +96,10 @@ export function Dialog({
       <button className="close" aria-label="Close dialog" onClick={onClose}>
         ×
       </button>
+      {icon}
       <h2 id={titleId}>{title}</h2>
       {children}
-    </dialog>
+    </motion.dialog>
   );
 }
 export function Photo({
@@ -95,6 +111,16 @@ export function Photo({
   alt: string;
   className?: string;
 }) {
+  if (!photo)
+    return (
+      <span
+        className={`member-avatar ${className}`}
+        role="img"
+        aria-label={alt || "Member avatar"}
+      >
+        {alt.trim().slice(0, 1).toUpperCase() || "✦"}
+      </span>
+    );
   return (
     <Image
       unoptimized

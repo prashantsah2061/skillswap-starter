@@ -1,17 +1,17 @@
 # SkillSwap
 
-A responsive capstone frontend for exchanging skills, with a separate backend starter scaffold. The frontend uses Supabase Authentication and private user profiles, with fictional sample discovery, messaging, and session content. Calls remain simulated.
+A responsive skill-exchange application using Next.js and Supabase for authentication, private and discoverable profiles, skill selection, discovery, mutual matches, messages and scheduled sessions. Apply the migrations in the [integration guide](docs/SUPABASE-INTEGRATION.md) before using community features.
 
 ## Folder structure
 
 ```text
 skillswap-starter/
-├── frontend/            Next.js UI, demo state, CSS, and static images
+├── frontend/            Next.js UI, authenticated server API, CSS, and images
 │   ├── src/app/         Pages and layouts
 │   ├── src/components/  Reusable UI and feature components
-│   ├── src/lib/         Frontend demo fixtures
+│   ├── src/lib/         Auth, profile and community helpers
 │   └── public/          Images and other static assets
-├── backend/             Separate Next.js API scaffold
+├── backend/             Optional Next.js API workspace
 │   ├── src/app/api/     API route handlers
 │   ├── src/app/auth/    Email-confirmation route scaffold
 │   ├── src/services/    Business-rule placeholders
@@ -40,7 +40,7 @@ npm ci
 npm run dev
 ```
 
-Open http://localhost:3000 and sign in or create an account. `npm run dev` starts the frontend only. Set up Supabase and private profile storage using the [authentication guide](docs/AUTHENTICATION-REVIEW.md).
+Open http://localhost:3000 and sign in or create an account. `npm run dev` starts the frontend only. Set up authentication using the [authentication guide](docs/AUTHENTICATION-REVIEW.md), then apply the community migrations and catalog in the [integration guide](docs/SUPABASE-INTEGRATION.md).
 
 To run the backend scaffold in another terminal:
 
@@ -48,11 +48,11 @@ To run the backend scaffold in another terminal:
 npm run dev:backend
 ```
 
-The backend uses http://localhost:3002. `/api/health` reports scaffold status; unfinished API endpoints return HTTP 501. The frontend does not call these endpoints. Optional Supabase settings belong in `backend/.env.local`; see `backend/.env.example`.
+The backend uses http://localhost:3002 and reuses the shared community API. The frontend calls its own same-origin API and does not require a separate backend service. Optional backend settings belong in `backend/.env.local`. Authentication remains in the frontend server actions; old backend auth endpoints remain unused placeholders.
 
 ## Commands
 
-| Command | Purpose |
+| Command | Purpose |1
 | --- | --- |
 | `npm run dev` | Start the frontend on port 3000 |
 | `npm run dev:backend` | Start the backend scaffold on port 3002 |
@@ -66,10 +66,13 @@ The backend uses http://localhost:3002. `/api/health` reports scaffold status; u
 
 ## Frontend features
 
-Real Supabase email/password and Google authentication, verified password recovery, MFA, private editable profiles, and an illustrated multi-field skill community on the login page. Discovery, matching, messaging, and session content remain fictional browser-based examples. Passwords are managed by Supabase Auth and are never stored in application tables or browser preferences.
+Real Supabase email/password and Google authentication, verified password recovery, MFA, private editable profiles, and an illustrated multi-field skill community on the login page. Discovery, matching, messaging, skill selections, dashboard counts and session bookings use the authenticated member’s database records. Passwords are managed by Supabase Auth and are never stored in application tables or browser preferences.
 
-See [Frontend demo guide](docs/FRONTEND-DEMO.md) for routes, interactions, and verification. See [Architecture](docs/01-ARCHITECTURE.md) for the preserved backend integration plan.
+See [Supabase integration](docs/SUPABASE-INTEGRATION.md) for current routes, security rules, migration order and verification. The old frontend demo guide documents the previous prototype.
 
 ## Host on Render
 
 Use a **Node web service** from the repository root. The included `render.yaml` contains no credentials. Follow [the Render deployment guide](docs/RENDER-DEPLOYMENT.md) to set build/start commands and enter your environment values privately in Render.
+
+Database-backed profiles, skills, discovery, matches, chat and scheduling: see [Supabase integration and migration handoff](docs/SUPABASE-INTEGRATION.md). Apply the documented migrations before using the community screens; no migrations or seeds run automatically.
+f

@@ -3,91 +3,82 @@ import {
   createContext,
   useContext,
   useEffect,
+  useCallback,
   useState,
   type ReactNode,
 } from "react";
-import { z } from "zod";
-import { initialDemo, type DemoState } from "@/lib/frontend-data";
-// Validate browser storage before using it; old or malformed data falls back to fixtures.
-const profileSchema = z.object({
-  name: z.string(),
-  city: z.string(),
-  bio: z.string(),
-  photo: z.enum(["alex", "maya", "jordan"]),
-  teaches: z.array(z.string()),
-  learns: z.array(z.string()),
-});
-const stateSchema = z.object({
-  profile: profileSchema,
-  matches: z.array(z.string()),
-  messages: z.record(
-    z.string(),
-    z.array(
-      z.object({
-        id: z.string(),
-        text: z.string(),
-        mine: z.boolean(),
-        time: z.string(),
-      }),
-    ),
-  ),
-  sessions: z.array(
-    z.object({
-      id: z.string(),
-      partner: z.string(),
-      learn: z.string(),
-      teach: z.string(),
-      date: z.string(),
-      time: z.string(),
-      past: z.boolean(),
-    }),
-  ),
-});
-const Context = createContext<{
-  data: DemoState;
-  update: (fn: (prev: DemoState) => DemoState) => void;
-  storageWarning: boolean;
-} | null>(null);
-export function DemoProvider({ children, storageKey }: { children: ReactNode; storageKey: string }) {
-  const [data, setData] = useState(initialDemo);
-  const [ready, setReady] = useState(false);
-  const [storageWarning, setWarning] = useState(false);
-  useEffect(() => {
-    // The first client render matches the server. Restore preferences after hydration.
-    const task = setTimeout(() => {
-      try {
-        const saved = localStorage.getItem(storageKey);
-        if (saved) {
-          const parsed = stateSchema.safeParse(JSON.parse(saved));
-          if (parsed.success) setData(parsed.data);
+import { usePathname } from "next/navigation";
+import type { CommunityState } from "@/lib/community/types";
+export async function community<T>(
+  params: Record<string, string> | object,
+  mutate = false,
+): Promise<T> {
+  const response = await fetch(
+    "/api/community" +
+      (mutate
+        ? ""
+        : "?" + new URLSearchParams(params as Record<string, string>)),
+    mutate
+      ? {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(params),
         }
-      } catch {
-        setWarning(true);
-      }
-      setReady(true);
-    }, 0);
-    return () => clearTimeout(task);
-  }, [storageKey]);
+      : { cache: "no-store" },
+  );
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || "Request failed");
+  return mutate ? result.data : result;
+}
+const Context = createContext<{
+  data: CommunityState;
+  refresh: () => Promise<void>;
+} | null>(null);
+export function DemoProvider({ children }: { children: ReactNode }) {
+  const path = usePathname();
+  const needsCommunity = path !== "/security" && path !== "/settings";
+  const [data, setData] = useState<CommunityState | null>(null),
+    [error, setError] = useState("");
+  const refresh = useCallback(async () => {
+    const next = await community<CommunityState>({ op: "state" });
+    setData(next);
+    setError("");
+  }, []);
   useEffect(() => {
-    if (!ready) return;
-    let warning: ReturnType<typeof setTimeout> | undefined;
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(data));
-    } catch {
-      warning = setTimeout(() => setWarning(true), 0);
-    }
+    if (!needsCommunity) return;
+    let live = true;
+    community<CommunityState>({ op: "state" })
+      .then((d) => {
+        if (live) setData(d);
+      })
+      .catch((e) => {
+        if (live) setError(e.message);
+      });
     return () => {
-      if (warning) clearTimeout(warning);
+      live = false;
     };
-  }, [data, ready, storageKey]);
+  }, [needsCommunity]);
+  if (!needsCommunity) return children;
+  if (!data)
+    return (
+      <div className="shell card empty" role="status">
+        {error || "Loading your SkillSwap account…"}
+        {error && (
+          <button
+            className="button"
+            onClick={() => refresh().catch((e) => setError(e.message))}
+          >
+            Retry
+          </button>
+        )}
+      </div>
+    );
   return (
-    <Context.Provider value={{ data, update: setData, storageWarning }}>
-      {children}
-    </Context.Provider>
+    <Context.Provider value={{ data, refresh }}>{children}</Context.Provider>
   );
 }
 export function useDemo() {
   const value = useContext(Context);
-  if (!value) throw new Error("DemoProvider is required");
+  if (!value) throw new Error("Community provider required");
   return value;
 }

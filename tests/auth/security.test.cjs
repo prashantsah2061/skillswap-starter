@@ -79,7 +79,7 @@ test('logout uses Supabase, redirects only after successful revocation',async()=
   assert.ok((await fixture({revokeError:{}}).actions.logoutAction()).error);
 });
 test('private profile API returns401 and rejects cross-origin mutations',async()=>{
- const mocks={'@/lib/auth/session':{verifiedSession:async()=>null},'next/server':{NextResponse:{json:(body,options)=>({body,...options})}},'next/headers':{}};
+ const mocks={'@/lib/auth/session':{verifiedSession:async()=>null},'next/server':{NextResponse:{json:(body,options)=>({body,...options})}},'next/headers':{headers:async()=>new Headers({host:'localhost:3000'})}};
  const api=loadTs('frontend/src/app/api/profile/route.ts',mocks);
  assert.equal((await api.GET()).status,401);
  const request={headers:new Headers({origin:'https://attacker.example'})};
@@ -114,7 +114,7 @@ test('profile and account menu render the same saved name as escaped text',()=>{
  const mocks={
  '@/components/auth/account-provider':{useAccount:()=>({name,profile,setProfile(){}})},
  '@/lib/profile/actions':{saveProfileAction:async()=>({error:null,profile})},
- './demo-provider':{useDemo:()=>({data:{profile:{name:'sample',city:'',bio:'',photo:'alex',teaches:['Python'],learns:['SQL']}},update(){},storageWarning:false})},
+ './demo-provider':{useDemo:()=>({data:{userId:'a',profile:{id:'a',display_name:name,city:'',bio:'',visible:false},skills:[],selections:[]},refresh(){}})},
  '@/components/demo/demo-provider':{useDemo:()=>({data:{profile:{photo:'alex'}}})},
  './ui':{Photo:()=>null,Badge:({children})=>React.createElement('span',null,children)},
  '@/components/demo/ui':{Photo:()=>null,Logo:()=>null},
@@ -145,4 +145,17 @@ test('development allows matching loopback ports; production and cross-origin re
  await assert.rejects(()=>check('development','http://attacker.example','attacker.example'),/origin/);
  await assert.rejects(()=>check('production','http://localhost:3001','localhost:3001'),/origin/);
  assert.equal(await check('production','http://localhost:3000','localhost:3000'),'http://localhost:3000');
+});
+
+test('Render platform URL and explicit custom domains work without trusting arbitrary origins',async()=>{
+ async function check(env,origin,host){const o=loadTs('frontend/src/lib/auth/origin.ts',{'next/headers':{headers:async()=>new Headers({...(origin?{origin}:{}),host})}},{process:{env:{NODE_ENV:'production',...env}}});if(origin)await o.checkActionOrigin();return o.appOrigin();}
+ const render='https://fixture-app.onrender.com';
+ assert.equal(await check({RENDER_EXTERNAL_URL:render},render,'fixture-app.onrender.com'),render);
+ assert.equal(await check({RENDER_EXTERNAL_URL:render,APP_ORIGIN:'http://localhost:3000'},render,'fixture-app.onrender.com'),render);
+ assert.equal(await check({RENDER_EXTERNAL_URL:render,APP_ORIGIN:render+'/'},render,'fixture-app.onrender.com'),render);
+ assert.equal(await check({RENDER_EXTERNAL_URL:render,APP_ORIGIN:'https://custom.example'},render,'fixture-app.onrender.com'),render);
+ assert.equal(await check({RENDER_EXTERNAL_URL:render,APP_ORIGIN:'https://custom.example'},'https://custom.example','custom.example'),'https://custom.example');
+ assert.equal(await check({RENDER_EXTERNAL_URL:render},null,'fixture-app.onrender.com'),render);
+ await assert.rejects(()=>check({RENDER_EXTERNAL_URL:render},'https://attacker.example','attacker.example'),/origin/);
+ await assert.rejects(()=>check({},render,'fixture-app.onrender.com'),/origin/);
 });

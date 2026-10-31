@@ -14,7 +14,7 @@ export async function updateSession(request: NextRequest) {
   const { url, key } = getSupabaseConfig();
   let response = NextResponse.next({ request });
   const supabase = createServerClient(url, key, {
-    cookieOptions: { httpOnly: true, sameSite: "lax", secure: process.env.APP_ORIGIN?.startsWith("https:") || false },
+    cookieOptions: { httpOnly: true, sameSite: "lax", secure: (process.env.APP_ORIGIN?.startsWith("https:") || process.env.RENDER_EXTERNAL_URL?.startsWith("https:")) || false },
     cookies: {
       getAll() {
         return request.cookies.getAll();

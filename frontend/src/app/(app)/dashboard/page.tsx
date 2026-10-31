@@ -1,7 +1,6 @@
 import { requireUser } from "@/lib/auth/require-user";
-import { Explore } from "@/components/demo/explore";
-
+import { DashboardSummary } from "@/components/demo/dashboard";
 export default async function Dashboard() {
   await requireUser();
-  return <Explore />;
+  return <DashboardSummary />;
 }
