@@ -75,7 +75,7 @@ export function SiteNav() {
               setOpen(!open);
             }}
           >
-            <Photo photo="" alt="" />
+            <Photo photo={account.profile?.avatar_url || ""} alt={account.name} />
             <span>{account.name}</span>
             <span aria-hidden="true">⌄</span>
           </summary>

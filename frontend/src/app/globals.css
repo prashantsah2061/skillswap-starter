@@ -102,7 +102,8 @@ small {
   padding: 34px 48px 50px;
 }
 .topbar {
-  background: linear-gradient(115deg, #151B30, #0B1020);
+  background: #FFFFFF;
+  border-bottom: 1px solid var(--line);
   color: var(--ink);
 }
 .nav-inner {
@@ -161,7 +162,7 @@ small {
   transition: color 0.2s;
 }
 .nav-inner nav a:hover {
-  background: #ffffff12;
+  background: #24243A12;
 }
 .nav-inner nav a.active {
   color: var(--ink);
@@ -199,7 +200,7 @@ small {
   top: 55px;
   background: var(--surface);
   color: var(--ink);
-  box-shadow: 0 10px 40px #06091160;
+  box-shadow: 0 10px 40px #24243A2b;
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 8px;
@@ -241,7 +242,7 @@ small {
 }
 .button {
   background: var(--brand-gradient);
-  border: 1px solid #c8b1ff30;
+  border: 1px solid #7950F235;
   border-radius: 11px;
   color: var(--on-primary);
   font-weight: 600;
@@ -258,7 +259,7 @@ small {
 }
 .button:hover {
   background: var(--brand-gradient);
-  box-shadow: 0 8px 24px #8855ff40;
+  box-shadow: 0 8px 24px #7950F240;
   transform: translateY(-1px);
 }
 .button.lime {
@@ -413,10 +414,10 @@ legend {
 }
 .category-card:hover {
   transform: translateY(-4px) scale(1.01);
-  box-shadow: 0 10px 25px #77abff25;
+  box-shadow: 0 10px 25px #FF7A6B25;
 }
 .category-card.featured {
-  background: linear-gradient(125deg, #283353, #233365);
+  background: linear-gradient(125deg, #F3F0FF, #F3F0FF);
 }
 .category-icon {
   width: 49px;
@@ -593,7 +594,7 @@ legend {
   margin-top: 8px;
 }
 .learning-heading {
-  background: linear-gradient(110deg, #283353, #233365);
+  background: linear-gradient(110deg, #F3F0FF, #F3F0FF);
   border-radius: 14px;
   padding: 22px 18px;
   margin-bottom: 16px;
@@ -904,7 +905,7 @@ legend {
   border: 1px solid var(--border);
   border-radius: 22px;
   background: var(--surface);
-  box-shadow: 0 25px 90px #06091170;
+  box-shadow: 0 25px 90px #24243A32;
   width: 500px;
   max-width: calc(100vw - 32px);
   max-height: 90vh;
@@ -913,7 +914,7 @@ legend {
   color: var(--ink);
 }
 .dialog::backdrop {
-  background: #060911b3;
+  background: #24243A66;
   backdrop-filter: blur(3px);
 }
 .dialog .close {
@@ -1246,7 +1247,7 @@ legend {
   max-width: 100%;
   padding: 38px 42px;
   border: 0;
-  box-shadow: 0 12px 50px #06091135;
+  box-shadow: 0 12px 50px #24243A18;
 }
 .auth-card h1 {
   font-size: 36px;
@@ -1414,7 +1415,7 @@ legend {
   position: absolute;
   left: 10px;
   bottom: 10px;
-  background: #10172edb;
+  background: #F3F0FFdb;
   color: var(--ink);
   padding: 7px 10px;
   border-radius: 7px;
@@ -1431,7 +1432,7 @@ legend {
   position: absolute;
   right: 9px;
   bottom: 8px;
-  background: #10172ebd;
+  background: #F3F0FFbd;
   color: var(--ink);
   font-size: 9px;
   padding: 3px 6px;
@@ -1479,7 +1480,7 @@ legend {
   color: var(--accent-cyan);
 }
 .code-string {
-  color: #f3a48c;
+  color: #B4233C;
 }
 .code-keyword {
   color: var(--accent-cyan);
@@ -2333,7 +2334,7 @@ legend {
 
 /* Shared treatments for the login's navy / violet / cyan palette. */
 .topbar {
-  background: linear-gradient(115deg, #151e39eb, #10172ef2);
+  background: linear-gradient(115deg, #F3F0FFeb, #F3F0FFf2);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(18px);
 }
@@ -2343,35 +2344,35 @@ legend {
 .auth-shell > .brand .logo-arrows b:first-child { color: var(--accent-blue); }
 .chip.selected, .decision-buttons button + button span, .phase-indicators > div.selected, .phase-indicators .selected b, .swap-plan .current b { color: var(--on-primary); }
 .nav-inner nav a.active { color: var(--on-primary); font-weight: 600; }
-.nav-indicator { background: var(--brand-gradient); box-shadow: 0 4px 18px #8c5aff26; }
+.nav-indicator { background: var(--brand-gradient); box-shadow: 0 4px 18px #7950F226; }
 .card, .category-card, .dialog { background: var(--panel-gradient); }
-.category-card.featured { background: linear-gradient(125deg, #2c3a64, #202e58); border-color: #ad8aff50; }
-.category-card:hover { border-color: #ad8aff70; box-shadow: 0 10px 30px #8c5aff20; }
+.category-card.featured { background: linear-gradient(125deg, #F3F0FF, #F3F0FF); border-color: #7950F258; }
+.category-card:hover { border-color: #7950F27b; box-shadow: 0 10px 30px #7950F220; }
 .category-link { color: var(--accent-blue); }
 .button.lime { background: var(--brand-gradient); }
-.button.lime:hover { background: var(--brand-gradient); box-shadow: 0 8px 24px #8855ff40; }
+.button.lime:hover { background: var(--brand-gradient); box-shadow: 0 8px 24px #7950F240; }
 .button.secondary { background: var(--surface-raised); color: var(--ink); }
 .button.secondary:hover { background: var(--soft-violet); }
-.button.danger { background: #b92c50; color: #fff; }
+.button.danger { background: #b92c50; color: #24243A; }
 .blue, .color-0 { background: var(--soft-blue); color: var(--accent-blue); }
 .mint, .color-1, .color-2 { background: var(--soft-cyan); color: var(--accent-cyan); }
 .purple, .green, .color-3 { background: var(--soft-violet); color: var(--accent-violet); }
-.chip.selected, .phase-indicators > div.selected { background: var(--soft-violet); border-color: #ad8aff60; color: var(--ink); }
+.chip.selected, .phase-indicators > div.selected { background: var(--soft-violet); border-color: #7950F26a; color: var(--ink); }
 .phase-indicators .selected b, .swap-plan .current b { background: var(--primary); }
 .discovery-filters select { background: var(--surface-input); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; }
 option { background: var(--surface-input); color: var(--ink); }
 input, textarea, select { background: var(--surface-input); accent-color: var(--primary); }
 .search { background: var(--surface-input); }
 .search input { background: none; color: var(--ink); }
-.search:focus-within { outline: 2px solid var(--accent-blue); box-shadow: 0 0 0 4px #78acff0c; }
-.feedback { background: var(--soft-cyan); border-color: #66d3e435; color: var(--ink); }
+.search:focus-within { outline: 2px solid var(--accent-blue); box-shadow: 0 0 0 4px #FF7A6B0c; }
+.feedback { background: var(--soft-cyan); border-color: #7950F23a; color: var(--ink); }
 .error-feedback { color: var(--danger); background: var(--danger-bg); }
-.message.mine p, .room-chat-history .mine { background: var(--soft-violet); color: var(--ink); border: 1px solid #c0a5ff20; }
+.message.mine p, .room-chat-history .mine { background: var(--soft-violet); color: var(--ink); border: 1px solid #7950F223; }
 .conversation.selected { background: var(--soft-violet); box-shadow: inset 3px 0 0 var(--accent-violet); }
-.dialog::backdrop { background: #060911b3; }
+.dialog::backdrop { background: #24243A66; }
 .room-controls > button[aria-pressed="true"] { color: var(--danger); }
 .auth-card { border: 1px solid var(--border); box-shadow: var(--panel-shadow); }
-::selection { background: #8c5aff65; color: #fff; }
+::selection { background: #7950F28d; color: #24243A; }
 @media (prefers-reduced-motion: reduce) {
   .button, .category-card { transition: none; }
 }
@@ -2383,3 +2384,8 @@ input, textarea, select { background: var(--surface-input); accent-color: var(--
 .signup-success p { margin-bottom: 0; }
 @keyframes auth-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .auth-spinner { animation: none; } }
+.topbar { background: #FFFFFFf2; box-shadow: 0 1px 12px #24243A0d; }
+.logo-arrows b:last-child, .auth-shell > .brand .logo-arrows b:last-child { color: var(--coral); }
+.category-card.featured { background: linear-gradient(125deg, #F3F0FF, #FFF1EE); }
+.logo-arrows b:first-child, .auth-shell > .brand .logo-arrows b:first-child { color: var(--primary); }
+.blue, .color-0 { background: var(--soft-violet); color: var(--accent-violet); }

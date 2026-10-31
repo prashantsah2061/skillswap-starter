@@ -27,7 +27,9 @@ export function Discovery({ initialSkill = "" }: { initialSkill?: string }) {
     [direction, setDirection] = useState(0),
     [pending, setPending] = useState("");
   const filters = { op: "discover", skill, learning, category, city, search };
+  const complete = data.profile.onboarded;
   useEffect(() => {
+    if (!complete) return;
     let live = true;
     const timer = setTimeout(() => {
       setLoading(true);
@@ -58,7 +60,7 @@ export function Discovery({ initialSkill = "" }: { initialSkill?: string }) {
       live = false;
       clearTimeout(timer);
     };
-  }, [skill, learning, category, city, search]);
+  }, [complete, skill, learning, category, city, search]);
   async function loadMore() {
     setLoading(true);
     try {
@@ -75,7 +77,30 @@ export function Discovery({ initialSkill = "" }: { initialSkill?: string }) {
       setLoading(false);
     }
   }
+  // Picks up members who become eligible while this page is open.
+  const empty = !members.length;
+  useEffect(() => {
+    if (!complete || !empty) return;
+    let live = true;
+    const check = () =>
+      community<Member[]>({ op: "discover", skill, learning, category, city, search })
+        .then((rows) => {
+          if (live && rows.length) {
+            setMembers(rows);
+            setMore(rows.length === 24);
+          }
+        })
+        .catch(() => {});
+    const timer = setInterval(check, 30000);
+    window.addEventListener("focus", check);
+    return () => {
+      live = false;
+      clearInterval(timer);
+      window.removeEventListener("focus", check);
+    };
+  }, [complete, empty, skill, learning, category, city, search]);
   const p = members[0];
+  const filtered = !!(skill || learning || category || city || search);
   async function decide(interested: boolean) {
     if (!p || busy) return;
     setBusy(true);
@@ -99,6 +124,23 @@ export function Discovery({ initialSkill = "" }: { initialSkill?: string }) {
       setPending("");
     }
   }
+  if (!complete)
+    return (
+      <div className="discovery-heading">
+        <span className="eyebrow">BETTER TOGETHER</span>
+        <h1>Meet your next skill partner</h1>
+        <div className="card empty">
+          <h2>Finish your profile first</h2>
+          <p>
+            Add a bio and at least one skill to teach and one to learn. Then you
+            can discover members and appear in Discover yourself.
+          </p>
+          <Link className="button lime" href="/profile">
+            Complete your profile →
+          </Link>
+        </div>
+      </div>
+    );
   return (
     <>
       <div className="discovery-heading">
@@ -195,7 +237,7 @@ export function Discovery({ initialSkill = "" }: { initialSkill?: string }) {
                 onSwipe={(right) => void decide(right)}
               >
                 <Photo
-                  photo=""
+                  photo={p.avatar_url || ""}
                   alt={p.display_name}
                   className="partner-photo"
                 />
@@ -205,7 +247,11 @@ export function Discovery({ initialSkill = "" }: { initialSkill?: string }) {
                       {p.display_name}
                     </Link>
                   </h2>
-                  <p className="location">{p.city}</p>
+                  <p className="location">
+                    {[p.username && `@${p.username}`, p.city]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
                   <p>{p.bio}</p>
                   <div className="partner-skills">
                     {(["teach", "learn"] as const).map((d) => (
@@ -246,23 +292,25 @@ export function Discovery({ initialSkill = "" }: { initialSkill?: string }) {
           </AnimatePresence>
           {!p && !loading && !error && (
             <div className="card empty">
-              <h2>No more members for these filters</h2>
-              <p>
-                Try other skills or locations, or invite someone to join
-                SkillSwap.
-              </p>
-              <button
-                className="button"
-                onClick={() => {
-                  setSkill("");
-                  setLearning("");
-                  setCategory("");
-                  setCity("");
-                  setSearch("");
-                }}
-              >
-                Clear filters
-              </button>
+              {filtered ? (
+                <>
+                  <h2>No members match these filters</h2>
+                  <button
+                    className="button"
+                    onClick={() => {
+                      setSkill("");
+                      setLearning("");
+                      setCategory("");
+                      setCity("");
+                      setSearch("");
+                    }}
+                  >
+                    Clear filters
+                  </button>
+                </>
+              ) : (
+                <h2>No members found yet. Invite your friends to join SkillSwap!</h2>
+              )}
             </div>
           )}
           {more && (
@@ -350,7 +398,10 @@ export function Matches() {
       <div className="matches-grid">
         {rows.map((r, index) => (
           <Reveal as="article" className="card match-card" key={r.id} index={index} lift>
-            <Photo photo="" alt={r.member?.display_name || ""} />
+            <Photo
+              photo={r.member?.avatar_url || ""}
+              alt={r.member?.display_name || ""}
+            />
             <div>
               <Badge tone="mint">Mutual match</Badge>
               <h2>{r.member?.display_name}</h2>

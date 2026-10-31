@@ -262,7 +262,10 @@ export function Messages({ selectedId }: { selectedId?: string }) {
               className={`conversation ${c.id === selected?.id ? "selected" : ""}`}
               href={`/messages/${c.id}`}
             >
-              <Photo photo="" alt={c.member?.display_name || ""} />
+              <Photo
+                photo={c.member?.avatar_url || ""}
+                alt={c.member?.display_name || ""}
+              />
               <div>
                 <strong>{c.member?.display_name}</strong>
                 <p>{c.preview || "Start your skill swap"}</p>
@@ -290,7 +293,10 @@ export function Messages({ selectedId }: { selectedId?: string }) {
           {selected ? (
             <>
               <div className="message-header">
-                <Photo photo="" alt={selected.member?.display_name || ""} />
+                <Photo
+                  photo={selected.member?.avatar_url || ""}
+                  alt={selected.member?.display_name || ""}
+                />
                 <h2>{selected.member?.display_name}</h2>
                 <button className="button" onClick={() => setSchedule(true)}>
                   Schedule a session

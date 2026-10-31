@@ -41,4 +41,4 @@ A future swipe flow would send a decision to the backend, validate the authentic
 
 Keep mock data out of UI components and server-only code out of `shared/` and the frontend. Use client components for browser state and events. Await Next.js dynamic page parameters. Never use a user's browser-supplied identifier as proof of backend authorization. Do not store passwords in demo state.
 
-See the root README for current commands and `FRONTEND-DEMO.md` for the completed frontend behavior.
+See the root README for current commands and `SUPABASE-INTEGRATION.md` for the completed frontend behavior.

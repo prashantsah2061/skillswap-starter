@@ -12,7 +12,9 @@ test("community database: three-account RLS, atomic saves, matching, retries, me
  create table auth.sessions(id uuid primary key,user_id uuid references auth.users(id));create table auth.mfa_factors(user_id uuid,status text);
  create function auth.jwt() returns jsonb language sql stable as $$select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb$$;
  create function auth.uid() returns uuid language sql stable as $$select (auth.jwt()->>'sub')::uuid$$;
- grant usage on schema auth to authenticated,anon;`);
+ grant usage on schema auth to authenticated,anon;
+ create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
+ create table storage.objects(bucket_id text,name text,owner_id text);create function storage.foldername(text) returns text[] language sql immutable as $$select string_to_array($1,'/')$$;`);
     for (const file of fs.readdirSync("backend/supabase/migrations").sort()) {
       if (file === "202610290001_community.sql") {
         for (let n = 101; n <= 103; n++)
@@ -105,11 +107,8 @@ test("community database: three-account RLS, atomic saves, matching, retries, me
         "City",
         "Safe bio",
         JSON.stringify([
-          {
-            skill_id: skill,
-            direction: n === 1 ? "learn" : "teach",
-            level: "beginner",
-          },
+          { skill_id: skill, direction: "learn", level: "beginner" },
+          { skill_id: skill, direction: "teach", level: "beginner" },
         ]),
       ]);
     }
@@ -170,6 +169,9 @@ test("community database: three-account RLS, atomic saves, matching, retries, me
       ).length,
       0,
     );
+    await call("select public.set_my_skill($1,'learn','advanced',false)", [
+      skill,
+    ]);
     await as(1);
     assert.equal(
       (await call("select * from public.ensure_my_account_profile()"))[0]
@@ -245,7 +247,7 @@ test("community database: three-account RLS, atomic saves, matching, retries, me
           uid(1),
         ])
       ).length,
-      1,
+      2,
     );
     assert.equal(
       (

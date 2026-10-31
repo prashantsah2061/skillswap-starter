@@ -16,7 +16,7 @@ function SharingLine({ first, second, quiet }: { first: NodePosition; second: No
     const x2 = second.baseX + second.x.get(), y2 = second.baseY + second.y.get();
     return `M ${x1} ${y1} Q ${(x1+x2)/2} ${Math.min(y1,y2)-38} ${x2} ${y2}`;
   });
-  return <svg className="community-sharing" aria-hidden="true"><motion.path data-sharing-line d={path} fill="none" stroke="#d5c4ff" strokeWidth="2" strokeDasharray={quiet ? undefined : "5 5"} /></svg>;
+  return <svg className="community-sharing" aria-hidden="true"><motion.path data-sharing-line d={path} fill="none" stroke="#7950F2" strokeWidth="2" strokeDasharray={quiet ? undefined : "5 5"} /></svg>;
 }
 
 function CommunityNode({ index, skill, position, size, reset, quiet, surge, selected, connected, register, hover, focus, drag, connect, drop }: {

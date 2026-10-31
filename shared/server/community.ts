@@ -1,12 +1,27 @@
 import { z } from "zod";
 import { verifiedSession, mfaRequired } from "@/lib/auth/session";
 import { appOrigin } from "@/lib/auth/origin";
-const reply = (body: unknown, status = 200) =>
+export const reply = (body: unknown, status = 200) =>
   Response.json(body, {
     status,
     headers: { "Cache-Control": "private, no-store" },
   });
 const uuid = z.string().uuid();
+type Db = NonNullable<Awaited<ReturnType<typeof verifiedSession>>>["supabase"];
+const memberFields =
+  "id,display_name,username,city,bio,visible,onboarded,avatar_path,provider_avatar_url";
+// Members get one display URL: an uploaded picture, else the one from Google.
+function withAvatar<
+  T extends { avatar_path?: string | null; provider_avatar_url?: string | null },
+>(db: Db, row: T) {
+  const { avatar_path, provider_avatar_url, ...member } = row;
+  return {
+    ...member,
+    avatar_url: avatar_path
+      ? db.storage.from("avatars").getPublicUrl(avatar_path).data.publicUrl
+      : provider_avatar_url || null,
+  };
+}
 const selection = z.object({
   skill_id: uuid,
   direction: z.enum(["teach", "learn"]),
@@ -16,6 +31,9 @@ const mutation = z.discriminatedUnion("op", [
   z.object({
     op: z.literal("profile"),
     name: z.string().trim().min(1).max(80),
+    username: z
+      .union([z.literal(""), z.string().trim().toLowerCase().regex(/^[a-z0-9_]{3,30}$/)])
+      .optional(),
     city: z.string().trim().max(80),
     bio: z.string().trim().max(500),
     visible: z.boolean(),
@@ -56,7 +74,7 @@ const mutation = z.discriminatedUnion("op", [
     status: z.enum(["accepted", "declined", "cancelled", "completed"]),
   }),
 ]);
-async function auth() {
+export async function memberSession() {
   const s = await verifiedSession();
   if (!s || (await mfaRequired(s))) return null;
   const allowed = await s.supabase.rpc("account_session_allowed");
@@ -65,7 +83,7 @@ async function auth() {
 async function postResponse(req: Request) {
   if (req.headers.get("origin") !== (await appOrigin()))
     return reply({ error: "Forbidden" }, 403);
-  const s = await auth();
+  const s = await memberSession();
   if (!s) return reply({ error: "Please sign in again." }, 401);
   const text = await req.text();
   if (text.length > 24000) return reply({ error: "Request too large" }, 413);
@@ -90,6 +108,7 @@ async function postResponse(req: Request) {
         p_bio: p.bio,
         p_visible: p.visible,
         p_skills: p.selections,
+        p_username: p.username ?? null,
       };
       break;
     case "selection":
@@ -138,6 +157,8 @@ async function postResponse(req: Request) {
       "Session start has passed",
       "Choose a future start time",
       "Member unavailable",
+      "That username is already taken",
+      "Complete your profile first",
     ];
     return reply(
       {
@@ -154,7 +175,7 @@ async function postResponse(req: Request) {
   });
 }
 async function getResponse(req: Request) {
-  const s = await auth();
+  const s = await memberSession();
   if (!s) return reply({ error: "Please sign in again." }, 401);
   const db = s.supabase,
     q = new URL(req.url).searchParams,
@@ -184,22 +205,22 @@ async function getResponse(req: Request) {
             .eq("user_id", s.user.id),
         ),
       );
-    if (op === "me")
-      return reply(
-        checked(
-          await db
-            .from("profiles")
-            .select("id,display_name,city,bio,visible,onboarded")
-            .eq("id", s.user.id)
-            .maybeSingle(),
-        ),
+    if (op === "me") {
+      const me = checked(
+        await db
+          .from("profiles")
+          .select(memberFields)
+          .eq("id", s.user.id)
+          .maybeSingle(),
       );
+      return reply(me && withAvatar(db, me));
+    }
     if (op === "state") {
       checked(await db.rpc("ensure_my_account_profile"));
       const results = await Promise.all([
         db
           .from("profiles")
-          .select("id,display_name,city,bio,visible,onboarded")
+          .select(`${memberFields},created_at,updated_at`)
           .eq("id", s.user.id)
           .single(),
         db
@@ -218,7 +239,8 @@ async function getResponse(req: Request) {
         results.map(checked);
       return reply({
         userId: s.user.id,
-        profile,
+        email: s.user.email || "",
+        profile: withAvatar(db, profile as Parameters<typeof withAvatar>[1]),
         selections,
         skills,
         categories,
@@ -246,8 +268,8 @@ async function getResponse(req: Request) {
           )
         : [];
       return reply(
-        rows.map((r: { id: string }) => ({
-          ...r,
+        rows.map((r: { id: string; avatar_path: string | null }) => ({
+          ...withAvatar(db, r),
           user_skills: (selections || []).filter(
             (x: { user_id: string }) => x.user_id === r.id,
           ),
@@ -258,7 +280,7 @@ async function getResponse(req: Request) {
       const member = checked(
         await db
           .from("profiles")
-          .select("id,display_name,city,bio,visible,onboarded")
+          .select(memberFields)
           .eq("id", id("id"))
           .maybeSingle(),
       );
@@ -268,7 +290,9 @@ async function getResponse(req: Request) {
           .select("skill_id,direction,level")
           .eq("user_id", id("id")),
       );
-      return reply(member ? { ...member, user_skills: skills } : null);
+      return reply(
+        member ? { ...withAvatar(db, member), user_skills: skills } : null,
+      );
     }
     if (op === "conversations") {
       const offset = z.coerce
@@ -287,18 +311,18 @@ async function getResponse(req: Request) {
         ? checked(
             await db
               .from("profiles")
-              .select("id,display_name,city,bio")
+              .select(memberFields)
               .in("id", ids),
           )
         : [];
       return reply(
-        rows.map((r: { user_a: string; user_b: string }) => ({
-          ...r,
-          member: (members || []).find(
+        rows.map((r: { user_a: string; user_b: string }) => {
+          const member = (members || []).find(
             (m: { id: string }) =>
               m.id === (r.user_a === s.user.id ? r.user_b : r.user_a),
-          ),
-        })),
+          );
+          return { ...r, member: member && withAvatar(db, member) };
+        }),
       );
     }
     if (op === "conversation") {
@@ -314,11 +338,11 @@ async function getResponse(req: Request) {
       const member = checked(
         await db
           .from("profiles")
-          .select("id,display_name,city,bio")
+          .select(memberFields)
           .eq("id", partner)
           .maybeSingle(),
       );
-      return reply({ ...row, member });
+      return reply({ ...row, member: member && withAvatar(db, member) });
     }
     if (op === "messages") {
       let query = db

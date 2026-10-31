@@ -2,7 +2,7 @@
 
 ## What was inspected
 
-The repository's original member migration was a scaffold; backend feature services/routes were unfinished. Discovery, matches, messages, sessions, Explore selections and profile skill lists depended on `frontend-data.ts` and local storage. Dashboard rendered Explore, and member viewing was a TODO. Those production dependencies have been removed; historical fixtures now live under `tests/fixtures/` and are never imported by the application.
+The repository's original member migration was a scaffold; backend feature services/routes were unfinished. Discovery, matches, messages, sessions, Explore selections and profile skill lists depended on `frontend-data.ts` and local storage. Dashboard rendered Explore, and member viewing was a TODO. Those production dependencies and the old demo fixtures have been removed.
 
 A read-only inspection on 2026-10-29 found only `public.account_profiles` in the connected project, with owner-only read/update policies and the two authentication functions. Supabase's migration history was empty, so the account migration appears to have been installed manually. No live migrations, seeds, users, or data were changed by this implementation.
 
@@ -18,8 +18,9 @@ For a new, empty development project, apply these files once in this order throu
 4. `backend/supabase/migrations/202610290002_queries.sql`
 5. `backend/supabase/migrations/202610290003_timestamps.sql`
 6. `backend/supabase/migrations/202610290004_skill_changes.sql`
+7. `backend/supabase/migrations/202610300001_member_identity.sql` (adds usernames, pictures, the `avatars` storage bucket and its policies, and profile completion rules; deletes nothing)
 
-**For the inspected connected project:** the private account migration (step 2) is already present despite missing migration history. Apply step 1, skip step 2, then apply steps 3–6. Existing private profile values are retained and copied into newly created member rows. If the database has changed since inspection, compare the actual schema and policies before executing these instructions.
+**For the inspected connected project:** the private account migration (step 2) is already present despite missing migration history. Apply step 1, skip step 2, then apply steps 3–7. Existing private profile values are retained and copied into newly created member rows. If the database has changed since inspection, compare the actual schema and policies before executing these instructions.
 
 Do not use a blanket `db push` until manual installations have been reconciled with migration history using the installed CLI's documented migration-repair workflow. Otherwise it can attempt to recreate existing policies/tables. Do not edit the old migration files or drop existing tables to resolve history differences.
 
@@ -46,7 +47,7 @@ In Supabase:
 
 ## Data and security behavior
 
-`account_profiles` is private and authoritative for display name, city and bio. A non-callable trigger in `private` synchronizes these fields to `profiles` in the same transaction, including edits through the older private profile action/API. Existing account fields win during migration backfill. `ensure_my_account_profile()` is idempotent, creates a missing member row and initializes new names from display/full/name metadata without copying email addresses. Existing edited names are preserved. Profiles begin invisible and incomplete; saving the profile completes onboarding, and the visibility checkbox controls discovery.
+`account_profiles` is private and authoritative for display name, city and bio. A non-callable trigger in `private` synchronizes these fields to `profiles` in the same transaction, including edits through the older private profile action/API. Existing account fields win during migration backfill. `ensure_my_account_profile()` is idempotent, creates a missing member row and initializes new names from display/full/name metadata without copying email addresses. Existing edited names are preserved. Profiles begin invisible and incomplete. A profile is complete with a name, a bio, one skill to teach and one to learn (a picture is optional; initials are the default). Only complete, visible members appear in Discover or can like others, and removing a required field removes them again. The visibility checkbox lets a complete member opt out.
 
 The existing `account_session_allowed()` is retained unchanged: it requires a live Auth session, confirmed email, and AAL2 when an admin or a verified MFA factor requires it. All feature tables either have a restrictive policy using that function or a participant/owner policy that also invokes it. All mutation RPCs explicitly call it, derive the actor from `auth.uid()`, use an empty search path and qualified objects, and revoke PUBLIC/anon execution. Definer access is used only for the bounded synchronization and transaction workflows, not ordinary reads. The private trigger functions cannot be executed directly. No service-role client is used.
 
@@ -100,3 +101,13 @@ The connected production project was only inspected read-only. Live browser flow
 - `git diff --check`: passed.
 
 The new message whitespace constraint is `NOT VALID` for historical rows, preserving any existing legacy content while enforcing it on every new write. No historical messages are deleted or rewritten. The SQL tests also verify migration backfill when private account and member profile text differ.
+
+## Profile pictures
+
+Uploads go through `POST /api/avatar`, which checks the file's actual bytes (JPEG, PNG, or WebP), enforces 5 MB, and writes to `avatars/<user id>/<random id>.<ext>` using the member's own session. `set_my_avatar` then records the path, only for a file that member owns. Storage policies let members add, read, and delete files only in their own folder. The bucket is public-read so pictures can be displayed by URL: file names are unguessable and cannot be listed, but anyone holding a URL can view that picture.
+
+Google pictures are copied from account metadata on the first profile creation only, and only from `googleusercontent.com`, because that metadata is editable by its user. Removing a picture also stops a Google picture from returning at the next sign-in.
+
+## Finding demo accounts
+
+`backend/supabase/audit/find-demo-data.sql` is read-only. It lists accounts with placeholder email domains, demo-style addresses, exact names from the old demo data, or no sign-in yet, with the reason for each. A match is a reason to review, not proof that an account is fake. No deletion script is provided; review the results first.

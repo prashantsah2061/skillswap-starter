@@ -1,34 +1,37 @@
-/* Midnight Purple + Electric Blue: shared SkillSwap palette. */
+/* Modern Social + Premium: shared SkillSwap palette. */
 :root {
-  color-scheme: dark;
-  --page-bg: #0B1020;
-  --surface: #151B30;
-  --surface-raised: #1E2640;
-  --surface-input: #0F1528;
-  --text-primary: #F8FAFC;
-  --text-secondary: #94A3B8;
-  --text-subtle: #94A3B8;
-  --line: #94A3B826;
-  --primary: #8B5CF6;
-  --primary-hover: #9D74F8;
-  --on-primary: #0B1020;
-  /* Lighter tints of the palette, for text that sits on dark surfaces. */
-  --accent-violet: #A78BFA;
-  --accent-blue: #60A5FA;
-  --accent-cyan: #22D3EE;
-  --soft-violet: #2A2352;
-  --soft-blue: #172A4F;
-  --soft-cyan: #0F3540;
-  --danger: #ffbfd1;
-  --danger-bg: #392139;
-  --danger-line: #d1778e50;
-  --brand-gradient: linear-gradient(110deg, #8B5CF6, #3B82F6);
-  --panel-gradient: linear-gradient(145deg, #1E2640cc, #151B30ed 65%, #1B1F3Eed);
-  --page-gradient: radial-gradient(ellipse at 8% 25%, #3B82F630, transparent 60%), radial-gradient(ellipse at 95% 0%, #8B5CF630, transparent 55%);
-  --panel-shadow: 0 14px 40px #05081235;
+  color-scheme: light;
+  --page-bg: #FAF9F6;
+  --surface: #FFFFFF;
+  --surface-raised: #F3F0FF;
+  --surface-input: #FAF9F6;
+  --text-primary: #24243A;
+  --text-secondary: #77788A;
+  --text-subtle: #77788A;
+  --line: #24243A1F;
+  --primary: #7950F2;
+  --primary-hover: #6741D9;
+  --on-primary: #FFFFFF;
+  /* Coral and gold are too faint as text on light surfaces, so they stay fills
+     and decoration; the accent-* shades below are their readable text forms. */
+  --coral: #FF7A6B;
+  --gold: #FFC857;
+  --accent-violet: #6741D9;
+  --accent-blue: #6741D9;
+  --accent-cyan: #7A5600;
+  --soft-violet: #E9E3FF;
+  --soft-blue: #FFE9E6;
+  --soft-cyan: #FFF4D6;
+  --danger: #B4233C;
+  --danger-bg: #FDECEF;
+  --danger-line: #B4233C33;
+  --brand-gradient: linear-gradient(110deg, #7950F2, #6741D9);
+  --panel-gradient: linear-gradient(145deg, #FFFFFF, #FFFFFF);
+  --page-gradient: radial-gradient(ellipse at 8% 25%, #F3F0FFcc, transparent 60%), radial-gradient(ellipse at 95% 0%, #FF7A6B14, transparent 55%);
+  --panel-shadow: 0 10px 30px #24243A12;
 }
 
-.member-avatar { display:inline-flex; align-items:center; justify-content:center; width:64px; height:64px; flex-shrink:0; border-radius:50%; background:#e6ebf1; color:#232d4b; font-size:28px; font-weight:600; }
+.member-avatar { display:inline-flex; align-items:center; justify-content:center; width:64px; height:64px; flex-shrink:0; border-radius:50%; background:#F3F0FF; color:#6741D9; font-size:28px; font-weight:600; }
 .member-avatar.partner-photo {width:100%;height:170px;border-radius:22px 22px 0 0;font-size:68px;}
 .member-avatar:not(.partner-photo) {object-fit:contain;}
 .message {white-space:pre-wrap;overflow-wrap:anywhere;}
@@ -44,5 +47,10 @@
 .typing-dots {display:inline-flex;align-items:center;gap:4px;height:1.5em;}
 .typing-dots span {width:6px;height:6px;border-radius:50%;background:var(--text-secondary);}
 .match-burst {position:relative;display:grid;place-items:center;width:64px;height:64px;margin:0 auto 10px;}
-.match-burst b {font-size:44px;font-weight:400;line-height:1;color:var(--accent-violet);}
-.match-burst i {position:absolute;width:7px;height:7px;border-radius:50%;background:var(--accent-cyan);}
+.match-burst b {font-size:44px;font-weight:400;line-height:1;color:var(--coral);}
+.match-burst i {position:absolute;width:7px;height:7px;border-radius:50%;background:var(--gold);}
+.picture-actions {display:flex;flex-wrap:wrap;justify-content:center;gap:4px 14px;margin:0 0 12px;}
+.picture-actions label {display:inline-block;position:relative;width:auto;cursor:pointer;margin:0;}
+.picture-actions input {position:absolute;inset:0;width:1px;height:1px;min-height:0;padding:0;border:0;opacity:0;overflow:hidden;}
+.picture-actions label:focus-within {outline:2px solid var(--accent-violet);outline-offset:2px;}
+.profile-preview > img {width:120px;height:120px;border-radius:50%;object-fit:cover;margin:0 auto 18px;display:block;}

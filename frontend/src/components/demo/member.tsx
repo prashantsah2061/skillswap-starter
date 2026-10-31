@@ -53,8 +53,9 @@ export function MemberProfile({ id }: { id: string }) {
       {error && <p role="alert">{error}</p>}
       {member ? (
         <article className="card profile-preview">
-          <Photo photo="" alt={member.display_name} />
+          <Photo photo={member.avatar_url || ""} alt={member.display_name} />
           <h1>{member.display_name}</h1>
+          {member.username && <p className="location">@{member.username}</p>}
           <p>{member.city}</p>
           <p>{member.bio}</p>
           {(["teach", "learn"] as const).map((d) => (

@@ -54,7 +54,6 @@ docs/04-BUILD-ORDER.md
 docs/05-TEAM-PLAN.md
 docs/06-TEST-CHECKLIST.md
 docs/FILE-STRUCTURE.txt
-docs/FRONTEND-DEMO.md
 docs/VALIDATION.md
 frontend/AGENTS.md
 frontend/CLAUDE.md
@@ -63,14 +62,10 @@ frontend/next-env.d.ts
 frontend/next.config.ts
 frontend/package.json
 frontend/public/images/README.md
-frontend/public/images/demo/alex.webp
 frontend/public/images/demo/career.webp
 frontend/public/images/demo/creative.webp
-frontend/public/images/demo/jordan.webp
 frontend/public/images/demo/languages.webp
 frontend/public/images/demo/living.webp
-frontend/public/images/demo/maya-room.webp
-frontend/public/images/demo/maya.webp
 frontend/public/images/demo/technical.webp
 frontend/public/images/demo/wellness.webp
 frontend/src/app/(app)/discover/page.tsx
@@ -98,7 +93,6 @@ frontend/src/app/loading.tsx
 frontend/src/app/not-found.tsx
 frontend/src/app/page.tsx
 frontend/src/components/auth/README.md
-frontend/src/components/demo/auth-screen.tsx
 frontend/src/components/demo/demo-provider.tsx
 frontend/src/components/demo/discovery.tsx
 frontend/src/components/demo/explore.tsx

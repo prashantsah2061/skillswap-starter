@@ -8,10 +8,14 @@ export type Selection = {
 export type Member = {
   id: string;
   display_name: string;
+  username?: string | null;
+  avatar_url?: string | null;
   city: string;
   bio: string;
   visible: boolean;
   onboarded: boolean;
+  created_at?: string;
+  updated_at?: string;
   user_skills?: Selection[];
 };
 export type Conversation = {
@@ -44,6 +48,7 @@ export type Session = {
 };
 export type CommunityState = {
   userId: string;
+  email: string;
   profile: Member;
   selections: Selection[];
   skills: Skill[];

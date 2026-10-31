@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useRef, useId, type ReactNode } from "react";
+import { useEffect, useRef, useId, useState, type ReactNode } from "react";
 import { motion } from "motion/react";
 export function Logo({ href = "/explore" }: { href?: string }) {
   return (
@@ -102,6 +102,12 @@ export function Dialog({
     </motion.dialog>
   );
 }
+function initials(name: string) {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  return (
+    (words[0]?.[0] || "") + (words.length > 1 ? words.at(-1)![0] : "")
+  ).toUpperCase();
+}
 export function Photo({
   photo,
   alt,
@@ -111,14 +117,16 @@ export function Photo({
   alt: string;
   className?: string;
 }) {
-  if (!photo)
+  // A dead provider link falls back to initials rather than a broken image.
+  const [failed, setFailed] = useState("");
+  if (!photo || failed === photo)
     return (
       <span
         className={`member-avatar ${className}`}
         role="img"
         aria-label={alt || "Member avatar"}
       >
-        {alt.trim().slice(0, 1).toUpperCase() || "✦"}
+        {initials(alt) || "✦"}
       </span>
     );
   return (
@@ -127,8 +135,10 @@ export function Photo({
       width={600}
       height={400}
       className={className}
-      src={`/images/demo/${photo}.webp`}
+      src={photo}
       alt={alt}
+      referrerPolicy="no-referrer"
+      onError={() => setFailed(photo)}
     />
   );
 }

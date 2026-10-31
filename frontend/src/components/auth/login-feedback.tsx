@@ -27,7 +27,7 @@ const hands: Record<LoginMood, typeof rest> = {
   peek: { left: eyes.left, right: { x: 84, y: 58 } },
   success: raised,
 };
-const skin = "#f2c7a5", shirt = "#8B5CF6";
+const skin = "#f2c7a5", shirt = "#7950F2";
 
 function Arm({ shoulder, hand, reduced }: { shoulder: number; hand: { x: number; y: number }; reduced: boolean }) {
   const transition = reduced ? { duration: 0 } : { type: "spring" as const, stiffness: 260, damping: 22 };

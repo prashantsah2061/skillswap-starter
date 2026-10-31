@@ -77,6 +77,7 @@ test(
             p_visible: true,
             p_skills: [
               { skill_id: skill, direction: "teach", level: "intermediate" },
+              { skill_id: skill, direction: "learn", level: "beginner" },
             ],
           }),
         );

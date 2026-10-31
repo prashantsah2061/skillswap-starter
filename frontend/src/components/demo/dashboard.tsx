@@ -21,7 +21,7 @@ export function DashboardSummary() {
       </div>
       <Reveal delay={0.14 + Math.min(counts.length, 8) * 0.05}>
         {!data.profile.onboarded && (
-          <p>Complete your profile and select your skills to get started.</p>
+          <p>Add a bio and your skills to appear in Discover.</p>
         )}
         <Link className="button lime" href="/profile">
           Edit profile & skills
