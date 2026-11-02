@@ -1,27 +1,31 @@
-/* Shared SkillSwap palette, based on the animated login. */
+/* Shared SkillSwap palette: warm beige surfaces, deep sage primary, soft pastel accents. */
 :root {
-  color-scheme: dark;
-  --page-bg: #080f27;
-  --surface: #17213c;
-  --surface-raised: #202c4e;
-  --surface-input: #10192f;
-  --text-primary: #f5f6ff;
-  --text-secondary: #a5b0cc;
-  --text-subtle: #8d9fc2;
-  --line: #b9c9ff25;
-  --primary: #675aff;
-  --primary-hover: #796cff;
-  --accent-violet: #b9a5ff;
-  --accent-blue: #78c7ff;
-  --accent-cyan: #66e4d3;
-  --soft-violet: #302853;
-  --soft-blue: #1c3454;
-  --soft-cyan: #163c42;
-  --danger: #ffbfd1;
-  --danger-bg: #392139;
-  --danger-line: #d1778e50;
-  --brand-gradient: linear-gradient(110deg, #9255ed, #675aff 48%, #308be9);
-  --panel-gradient: linear-gradient(145deg, #27314bcc, #171f39ed 65%, #21233ded);
-  --page-gradient: radial-gradient(ellipse at 8% 25%, #163d6a60, transparent 60%), radial-gradient(ellipse at 95% 0%, #42277a50, transparent 55%);
-  --panel-shadow: 0 14px 40px #02061535;
+  color-scheme: light;
+  --page-bg: #f5f0e8;
+  --surface: #fffdf9;
+  --surface-raised: #f7f2ea;
+  --surface-input: #fffdf9;
+  --text-primary: #2d2b27;
+  --text-secondary: #6a655c;
+  --text-subtle: #948d81;
+  --line: #e7dfd3;
+  --primary: #4f6f5d;
+  --primary-hover: #43604f;
+  --accent-violet: #76629a;
+  --accent-blue: #4d6d84;
+  --accent-cyan: #4c7860;
+  --accent-peach: #a5654a;
+  --soft-violet: #eee7f3;
+  --soft-blue: #e4edf2;
+  --soft-cyan: #e3eee5;
+  --soft-peach: #f8e8de;
+  --soft-pink: #f7e4e6;
+  --danger: #a23a4c;
+  --danger-bg: #f9e7e8;
+  --danger-line: #e5b7bd;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --brand-gradient: linear-gradient(var(--primary), var(--primary));
+  --panel-gradient: linear-gradient(var(--surface), var(--surface));
+  --page-gradient: none;
+  --panel-shadow: 0 1px 2px #3d32220a, 0 8px 24px #3d32220d;
 }

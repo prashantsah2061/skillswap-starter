@@ -193,3 +193,89 @@
 @media(prefers-reduced-motion:reduce) { .login-page .community-network *, .login-page .community-network *::before { animation: none!important; transition: none!important; } }
 
 .login-page .community-is-compact .community-scene { height: 380px; }
+
+/* Beige & pastel theme for the login page. Overrides the colors above without
+   changing layout, motion, or behavior. */
+.login-page { --login-ink: var(--text-primary); --login-soft: var(--text-secondary); --login-faint: var(--text-subtle); }
+.login-page .login-atmosphere { background: radial-gradient(ellipse at 8% 60%, #e3eee5aa, transparent 60%), radial-gradient(ellipse at 92% 20%, #f8e8deaa, transparent 55%); }
+.login-page .login-grid-texture { display: none; }
+.login-page .login-orb { opacity: .35; filter: blur(110px); }
+.login-page .orb-blue { background: #dfeadf; }
+.login-page .orb-purple { background: #efe4f2; }
+.login-page .orb-cyan { background: #f6e2d6; }
+.login-page .ambient-particle { background: #c9b9a4; box-shadow: none; }
+.login-page .login-header { border-bottom-color: var(--line); }
+.login-page .login-header .brand { color: var(--login-ink); font-family: var(--serif); font-weight: 500; }
+.login-page .login-header .logo-arrows b:first-child { color: var(--primary); }
+.login-page .login-header .logo-arrows b:last-child { color: var(--accent-peach); }
+.login-page .login-eyebrow { color: var(--accent-violet); background: var(--soft-violet); border-color: #ddd0e8; font-size: 10px; }
+.login-page .headline-kicker { color: var(--login-faint); font-size: 10px; }
+.login-page .headline-display { font-family: var(--serif); font-weight: 500; letter-spacing: -1.5px; color: var(--login-ink); }
+.login-page .headline-display em { font-style: italic; color: var(--primary); background: none; -webkit-text-fill-color: currentColor; animation: none; }
+.login-page .headline-dots button::after { background: #d8cfc1; }
+.login-page .headline-dots button.active::after { background: var(--primary); box-shadow: none; }
+.login-page .motion-pause { color: var(--login-soft); font-size: 11px; }
+.login-page .login-intro { color: var(--login-soft); font-size: 15px; }
+.login-page .live-dot { background: var(--primary); box-shadow: none; }
+.login-page .story-note { border-top-color: var(--line); }
+.login-page .note-icon { color: var(--primary); border-color: var(--line); background: var(--surface); }
+.login-page .story-note p { color: var(--login-soft); font-size: 11px; }
+.login-page .story-note strong { color: var(--login-ink); }
+.login-page .story-tag { color: var(--login-faint); font-size: 9px; }
+.login-page .login-form-card { border-color: var(--line); background: var(--surface); box-shadow: 0 1px 2px #3d32220a, 0 18px 48px #3d322214; backdrop-filter: none; }
+.login-page .login-form-card::before { display: none; }
+.login-page .login-welcome-icon { border-color: #cfe0d3; background: var(--soft-cyan); color: var(--primary); }
+.login-page .panel-kicker { color: var(--login-faint); font-size: 10px; }
+.login-page .login-form-card h2 { font-family: var(--serif); font-weight: 500; letter-spacing: -.8px; color: var(--login-ink); }
+.login-page .login-form-card h2 > span { color: var(--primary); }
+.login-page .login-subtitle { color: var(--login-soft); font-size: 14px; }
+.login-page .login-form-card label { color: var(--login-ink); font-size: 12px; }
+.login-page .login-input-wrap { border-color: var(--line); background: var(--surface); color: var(--login-faint); }
+.login-page .login-input-wrap:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px #4f6f5d1f; color: var(--primary); background: var(--surface); }
+.login-page .login-input-wrap input { color: var(--login-ink); font-size: 14px; }
+.login-page .login-input-wrap input::placeholder { color: var(--login-faint); }
+.login-page .login-input-wrap input:-webkit-autofill { -webkit-text-fill-color: var(--login-ink); }
+.login-page .login-eye { color: var(--login-faint); }
+.login-page .login-form-card .remember-option { color: var(--login-soft); font-size: 12px; }
+.login-page .remember-option input { accent-color: var(--primary); }
+.login-page .login-options > a { color: var(--primary); font-size: 12px; }
+.login-page .login-options > a:hover { color: var(--primary-hover); }
+.login-page .login-submit { border-color: transparent; border-radius: 12px; background: var(--primary); box-shadow: 0 6px 18px #4f6f5d2b; font-size: 14px; }
+.login-page .login-submit:hover { background: var(--primary-hover); }
+.login-page .login-error { background: var(--danger-bg); border-color: var(--danger-line); color: var(--danger); font-size: 12px; }
+.login-page .login-divider { color: var(--login-faint); font-size: 11px; }
+.login-page .login-divider span { background: var(--line); }
+.login-page .login-google { border-color: var(--line); background: var(--surface); color: var(--login-ink); font-size: 13px; border-radius: 12px; }
+.login-page .login-google:hover { background: var(--surface-raised); border-color: #d6cbbb; }
+.login-page .login-google > svg:last-child { color: var(--login-faint); }
+.login-page .login-signup { color: var(--login-soft); font-size: 12px; }
+.login-page .login-signup a { color: var(--primary); font-weight: 600; }
+.login-page .login-demo-caption { color: var(--login-faint); font-size: 10px; }
+.login-page .login-secure { color: var(--login-faint); font-size: 10px; }
+.login-page .login-footer { border-top-color: var(--line); color: var(--login-faint); font-size: 10px; }
+.login-page .login-footer > span:last-child { font-size: 11px; }
+.login-page :is(a,button,input):focus-visible { outline-color: var(--primary); }
+.login-page .login-notice { border-color: #cfdce5; background: var(--soft-blue); color: var(--accent-blue); font-size: 12px; }
+.login-page .community-toolbar { color: var(--login-soft); }
+.login-page .community-presence { background: var(--primary); box-shadow: none; }
+.login-page .community-toolbar-sub { color: var(--login-faint); }
+.login-page .community-controls button { border-color: var(--line); background: var(--surface); color: var(--login-soft); }
+.login-page .community-controls button:hover { background: var(--surface-raised); }
+.login-page .community-sharing path { filter: none; stroke: #9db7a5; }
+.login-page .community-signal { filter: none; }
+.login-page .community-orbit { border-color: #ddd3c5; }
+.login-page .community-card { border-color: var(--line); color: var(--login-ink); background: var(--surface); box-shadow: 0 1px 2px #3d32220a, 0 8px 20px #3d322212; }
+.login-page .community-card:hover, .login-page .community-card:focus-visible { box-shadow: 0 10px 26px #3d32221f, 0 0 0 3px color-mix(in srgb,var(--avatar-accent) 25%,transparent); }
+.login-page .community-card.is-selected, .login-page .community-card.is-connected { box-shadow: 0 0 0 3px color-mix(in srgb,var(--avatar-accent) 35%,transparent), 0 10px 26px #3d32221a; }
+.login-page .community-category { color: color-mix(in srgb, var(--avatar-accent) 40%, #2d2b27); background: color-mix(in srgb, var(--avatar-accent) 22%, transparent); }
+.login-page .community-card-detail { color: var(--login-soft); }
+.login-page .community-card-mark { color: var(--login-faint); }
+.login-page .community-card.is-selected .community-card-mark, .login-page .community-card.is-connected .community-card-mark { color: color-mix(in srgb, var(--avatar-accent) 45%, #2d2b27); }
+.login-page .community-center { border-color: transparent; color: #fff; background: var(--primary); box-shadow: 0 0 0 9px #4f6f5d14, 0 8px 24px #4f6f5d33; }
+.login-page .community-center > small { color: #dfe9e2; }
+.login-page .community-feedback > p { color: var(--login-soft); }
+.login-page .community-connection-message { border-color: #cfe0d3; background: var(--soft-cyan); }
+.login-page .community-connection-message > span { color: var(--login-soft); }
+.login-page .community-connection-message strong { color: var(--login-ink); }
+.login-page .community-connection-message > button { color: var(--login-soft); }
+.login-page .community-disclaimer { color: var(--login-faint); }
