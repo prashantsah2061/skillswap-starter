@@ -29,7 +29,10 @@
     "start:backend": "npm run start --workspace @skillswap/backend",
     "lint": "eslint frontend backend shared",
     "typecheck": "npm run typecheck --workspaces",
-    "test:auth": "node --test tests/auth/*.test.cjs"
+    "test:auth": "node --test tests/auth/*.test.cjs",
+    "test:discovery": "node --test tests/discovery/*.test.cjs",
+    "test:semantic": "node --test tests/semantic/*.test.cjs",
+    "eval:semantic": "node scripts/evaluate-semantic.cjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
