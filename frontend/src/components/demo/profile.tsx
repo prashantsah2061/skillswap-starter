@@ -1,6 +1,7 @@
 "use client";
 import { useState, type FormEvent } from "react";
-import { categories, type DemoProfile } from "@/lib/frontend-data";
+import type { DemoProfile } from "@/lib/frontend-data";
+import Link from "next/link";
 import { useDemo } from "./demo-provider";
 import { useAccount } from "@/components/auth/account-provider";
 import { saveProfileAction } from "@/lib/profile/actions";
@@ -101,53 +102,8 @@ export function Profile() {
               onChange={(e) => edit("bio", e.target.value)}
             />
           </label>
-          {(["teaches", "learns"] as const).map((key) => (
-            <fieldset key={key}>
-              <legend>
-                {key === "teaches"
-                  ? "Skills you can teach"
-                  : "Skills you want to learn"}
-              </legend>
-              <div className="editable-skills">
-                {profile[key].map((s) => (
-                  <span
-                    className={`badge ${key === "teaches" ? "blue" : "mint"}`}
-                    key={s}
-                  >
-                    {s}
-                    <button
-                      type="button"
-                      aria-label={`Remove ${s} from ${key}`}
-                      onClick={() =>
-                        edit(
-                          key,
-                          profile[key].filter((x) => x !== s),
-                        )
-                      }
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <select
-                aria-label={`Add a skill to ${key}`}
-                value=""
-                onChange={(e) => {
-                  if (e.target.value)
-                    edit(key, [...profile[key], e.target.value]);
-                }}
-              >
-                <option value="">+ Add a skill</option>
-                {categories
-                  .flatMap((c) => c.skills)
-                  .filter((s) => !profile[key].includes(s))
-                  .map((s) => (
-                    <option key={s}>{s}</option>
-                  ))}
-              </select>
-            </fieldset>
-          ))}
+          <p>Your account name, city, and bio stay private. Your discovery profile and skills are managed separately.</p>
+          <Link className="text-button" href="/onboarding">Edit your public profile and skill selections →</Link>
           <div className="profile-save">
             <button className="button lime" disabled={saving || !account.profile}>{saving ? "Saving…" : "Save profile"}</button>
             <button
@@ -168,8 +124,8 @@ export function Profile() {
           )}
           <small className="muted">
             {storageWarning
-              ? "Browser storage is unavailable. Skill and photo preferences last for this visit."
-              : "Your name, city, and bio are saved to your account. Skill and photo preferences stay in this browser."}
+              ? "Browser storage is unavailable. Photo preferences last for this visit."
+              : "Your name, city, and bio are saved to your account. Placeholder photo preferences stay in this browser."}
           </small>
         </section>
       </form>

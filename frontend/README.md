@@ -8,6 +8,16 @@ From the repository root, run `npm ci` and `npm run dev`. Open http://localhost:
 
 See `../docs/FRONTEND-DEMO.md` for page and interaction details.
 
+## Persisted public onboarding and discovery
+
+`/onboarding` explicitly saves a public name/bio and canonical teaching/learning
+selections. `/discover` reads real reciprocal recommendations through same-origin
+API proxies, with no demo fallback. `/profile` remains the separate private account
+profile. Configure the server-only backend URL and both apps' Supabase settings
+using [the discovery integration guide](../docs/DISCOVERY-API.md). Other sample
+matching/message/session screens remain demo content. This guide supersedes older
+demo-only statements below for public skills and discovery.
+
 ## Animated login and Supabase authentication
 
 `/login` uses Motion for React, Lucide icons, scoped login styles, and Tailwind utilities without Preflight so existing demo screens retain their styles. Decorative motion is reduced on small screens and disabled for reduced-motion preferences.

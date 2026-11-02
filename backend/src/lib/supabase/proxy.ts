@@ -3,6 +3,7 @@ import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseConfig } from "./config";
+import { rememberCookie, sessionCookieOptions } from "./session-preference";
 
 export async function updateSession(request: NextRequest) {
   // Allow the unconfigured scaffold to run; partial configuration is an error.
@@ -26,7 +27,7 @@ export async function updateSession(request: NextRequest) {
         previousResponse.headers.forEach((value, name) => {
           if (name !== "set-cookie") response.headers.set(name, value);
         });
-        values.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+        values.forEach(({ name, value, options }) => response.cookies.set(name, value, sessionCookieOptions(options, request.cookies.get(rememberCookie)?.value !== "0")));
         Object.entries(headers).forEach(([name, value]) => response.headers.set(name, value));
       },
     },

@@ -32,8 +32,10 @@ relationships. Skill level is self-reported, not a verified qualification.
 
 ## Planned endpoints
 
-All endpoints below except health are placeholders returning 501 in this delivery.
-The table is the contract to implement, not a claim they already work.
+Health, authenticated own public profiles, catalog/user-skills, and read-only discovery are implemented. Other endpoints
+below remain scaffolds (feature authorization checks can return 401/403 before
+501). See [the discovery contract](DISCOVERY-API.md) for its response, pagination,
+configuration requirements, and remaining frontend integration work.
 
 | Method | URL | Intended behavior |
 |---|---|---|
@@ -43,14 +45,14 @@ The table is the contract to implement, not a claim they already work.
 | POST | /api/auth/logout | Sign out and clear session |
 | POST | /api/auth/forgot-password | Send recovery link with generic response |
 | GET | /auth/confirm | Verify email token and redirect to onboarding |
-| GET | /api/profiles/me | Return own profile or null before onboarding |
-| PATCH | /api/profiles/me | Create/update own profile through validated upsert |
+| GET | /api/profiles/me | Implemented: return own public profile or null before onboarding |
+| PATCH | /api/profiles/me | Implemented: create/update own public profile with owner-scoped insert/update |
 | GET | /api/profiles/[userId] | Read a member's display profile |
-| GET | /api/skills | Read the skill catalog |
-| GET | /api/user-skills | Return own teaching/learning skills |
-| POST | /api/user-skills | Add own skill association |
-| DELETE | /api/user-skills | Remove own skill/direction association |
-| GET | /api/discover | Return a bounded page of eligible candidates |
+| GET | /api/skills | Implemented: read the visible canonical skill catalog |
+| GET | /api/user-skills | Implemented: return own teaching/learning skills |
+| POST | /api/user-skills | Implemented: add own catalog skill/direction idempotently |
+| DELETE | /api/user-skills | Implemented: remove own skill/direction association |
+| GET | /api/discover | Implemented: return a bounded page of reciprocal skill candidates |
 | POST | /api/swipes | Atomically record decision and possibly create match |
 | GET | /api/matches | List own matches |
 | GET | /api/matches/[matchId]/messages | Read a bounded page of messages |

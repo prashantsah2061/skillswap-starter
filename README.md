@@ -1,6 +1,6 @@
 # SkillSwap
 
-A responsive capstone frontend for exchanging skills, with a separate backend starter scaffold. The frontend uses Supabase Authentication and private user profiles, with fictional sample discovery, messaging, and session content. Calls remain simulated.
+A responsive capstone app for exchanging skills, with separate frontend and backend workspaces. Supabase supports authentication, private account profiles, explicit public skill onboarding, and reciprocal discovery. Matching, messaging, and sessions still include sample content; calls remain simulated.
 
 ## Folder structure
 
@@ -48,7 +48,7 @@ To run the backend scaffold in another terminal:
 npm run dev:backend
 ```
 
-The backend uses http://localhost:3002. `/api/health` reports scaffold status; unfinished API endpoints return HTTP 501. The frontend does not call these endpoints. Optional Supabase settings belong in `backend/.env.local`; see `backend/.env.example`.
+The backend uses http://localhost:3002. `/api/health` reports scaffold status; unfinished API endpoints return HTTP 501 after authorization checks. Public onboarding and discovery call authenticated backend APIs through same-origin frontend proxies. Configure both apps using [the discovery integration guide](docs/DISCOVERY-API.md), including the server-only backend URL and allowed frontend origin. Supabase settings belong in each app's `.env.local`.
 
 ## Commands
 
@@ -58,6 +58,7 @@ The backend uses http://localhost:3002. `/api/health` reports scaffold status; u
 | `npm run dev:backend` | Start the backend scaffold on port 3002 |
 | `npm run lint` | Lint frontend, backend, and shared types |
 | `npm run typecheck` | Type-check both applications |
+| `npm run test:discovery` | Test public onboarding, discovery, proxies, and isolated RLS |
 | `npm run build` | Build both applications |
 | `npm run build:frontend` | Build the frontend only |
 | `npm run build:backend` | Build the backend only |
@@ -66,9 +67,13 @@ The backend uses http://localhost:3002. `/api/health` reports scaffold status; u
 
 ## Frontend features
 
-Real Supabase email/password and Google authentication, verified password recovery, MFA, private editable profiles, and an illustrated multi-field skill community on the login page. Discovery, matching, messaging, and session content remain fictional browser-based examples. Passwords are managed by Supabase Auth and are never stored in application tables or browser preferences.
+Real Supabase email/password and Google authentication, verified password recovery, MFA, private editable profiles, explicit public profiles with canonical teach/learn selections, and authenticated reciprocal discovery. Matching, messaging, and session screens still include fictional browser-based examples. Passwords are managed by Supabase Auth and are never stored in application tables or browser preferences.
 
 See [Frontend demo guide](docs/FRONTEND-DEMO.md) for routes, interactions, and verification. See [Architecture](docs/01-ARCHITECTURE.md) for the preserved backend integration plan.
+
+An experimental [semantic skill matcher](docs/SEMANTIC-MATCHING.md) is available
+behind a disabled-by-default backend flag. Exact canonical-ID discovery remains
+the default/fallback; live provider evaluation is required before activation.
 
 ## Host on Render
 
