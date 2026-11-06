@@ -20,3 +20,27 @@ services:
         sync: false
       - key: APP_ORIGIN
         sync: false
+      - key: SKILLSWAP_BACKEND_URL
+        fromService:
+          type: web
+          name: skillswap-api
+          envVarKey: RENDER_EXTERNAL_URL
+  - type: web
+    name: skillswap-api
+    runtime: node
+    plan: free
+    branch: main
+    buildCommand: npm ci --include=dev && npm run build:backend
+    startCommand: npm run start --workspace @skillswap/backend
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: APP_ORIGIN
+        sync: false

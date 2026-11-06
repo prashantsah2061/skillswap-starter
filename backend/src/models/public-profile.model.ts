@@ -63,5 +63,10 @@ export function publicProfileModel(client: SupabaseClient) {
       if (error) throw unavailable();
       return input;
     },
+    async publish(actor: string) {
+      const { data, error } = await client.rpc("publish_my_public_profile");
+      if (error || data !== true) throw unavailable();
+      return { id: actor, visible: true, onboarded: true };
+    },
   };
 }

@@ -48,7 +48,8 @@ export async function backendProxy(request: Request, path: "/api/discover" | "/a
     }
     const upstream = await fetch(destination, {
       method: request.method, headers, body: body as BodyInit | undefined,
-      cache: "no-store", redirect: "manual", signal: AbortSignal.timeout(30000),
+      // Render's free web services can take about a minute to wake after idle.
+      cache: "no-store", redirect: "manual", signal: AbortSignal.timeout(90000),
     });
     const responseHeaders = new Headers(privateHeaders);
     // Every cookie is a separate header, including deletion and chunk cookies.

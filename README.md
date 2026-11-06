@@ -48,14 +48,14 @@ To run the backend scaffold in another terminal:
 npm run dev:backend
 ```
 
-The backend uses http://localhost:3002. `/api/health` reports scaffold status; unfinished API endpoints return HTTP 501 after authorization checks. Public onboarding and discovery call authenticated backend APIs through same-origin frontend proxies. Configure both apps using [the discovery integration guide](docs/DISCOVERY-API.md), including the server-only backend URL and allowed frontend origin. Supabase settings belong in each app's `.env.local`.
+The backend API runs at http://localhost:3002. `/api/health` reports process status but does not check the database. Public onboarding and discovery call authenticated backend APIs through same-origin frontend proxies. Configure both apps using [the discovery integration guide](docs/DISCOVERY-API.md), including the server-only backend URL and allowed frontend origin. Supabase settings belong in each app's `.env.local`.
 
 ## Commands
 
 | Command | Purpose |
 | --- | --- |
 | `npm run dev` | Start the frontend on port 3000 |
-| `npm run dev:backend` | Start the backend scaffold on port 3002 |
+| `npm run dev:backend` | Start the backend API on port 3002 |
 | `npm run lint` | Lint frontend, backend, and shared types |
 | `npm run typecheck` | Type-check both applications |
 | `npm run test:discovery` | Test public onboarding, discovery, proxies, and isolated RLS |
@@ -77,4 +77,4 @@ the default/fallback; live provider evaluation is required before activation.
 
 ## Host on Render
 
-Use a **Node web service** from the repository root. The included `render.yaml` contains no credentials. Follow [the Render deployment guide](docs/RENDER-DEPLOYMENT.md) to set build/start commands and enter your environment values privately in Render.
+Use the included Render Blueprint to deploy the frontend and matching API as two Node web services from the repository root. It contains no credentials. Follow [the Render deployment guide](docs/RENDER-DEPLOYMENT.md) to set the required environment values privately and verify the service wiring.

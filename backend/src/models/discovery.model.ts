@@ -47,7 +47,8 @@ export function discoveryModel(client: SupabaseClient): DiscoverySource {
     async profilesFor(userIds) {
       if (!userIds.length) return [];
       return readPages((offset) => client.from("profiles").select("id,display_name,bio", { count: "exact" })
-        .in("id", userIds).order("id").range(offset, offset + BATCH_SIZE - 1), profileSchema);
+        .in("id", userIds).eq("visible", true).eq("onboarded", true)
+        .order("id").range(offset, offset + BATCH_SIZE - 1), profileSchema);
     },
     async ownProfile(actorId) {
       const { data, error } = await read(client.from("profiles").select("id,display_name,bio").eq("id", actorId).maybeSingle());
@@ -58,7 +59,9 @@ export function discoveryModel(client: SupabaseClient): DiscoverySource {
       return parsed.data;
     },
     async profilesAfter(after) {
-      let query = client.from("profiles").select("id,display_name,bio").order("id", { ascending: true }).limit(BATCH_SIZE);
+      let query = client.from("profiles").select("id,display_name,bio")
+        .eq("visible", true).eq("onboarded", true)
+        .order("id", { ascending: true }).limit(BATCH_SIZE);
       if (after) query = query.gt("id", after);
       const { data, error } = await read(query);
       if (error) throw unavailable();

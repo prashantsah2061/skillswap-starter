@@ -72,6 +72,7 @@ export async function savePublicOnboarding(profile: { display_name: string; bio:
   if (savedKeys.size !== wanted.size || [...wanted].some(key => !savedKeys.has(key))) {
     throw new PublicApiError(409, "PROFILE_CHANGED", "Your skills changed during saving. Reload and review them.");
   }
+  await api("/api/public-profile", z.object({ data: z.object({ id: uuid, visible: z.literal(true), onboarded: z.literal(true) }) }), write("POST", {}));
 }
 
 export function loadDiscovery(cursor: string | null = null, signal?: AbortSignal) {

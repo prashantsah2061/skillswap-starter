@@ -16,3 +16,10 @@ export async function PATCH(request: Request) {
     return publicProfileModel(client).saveProfile(user.id, await publicInput(request, publicProfileSchema));
   });
 }
+export async function POST(request: Request) {
+  return publicResponse(async () => {
+    requirePublicOrigin(request);
+    const { client, user } = await requirePublicApiUser();
+    return publicProfileModel(client).publish(user.id);
+  });
+}

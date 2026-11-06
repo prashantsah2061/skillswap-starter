@@ -19,7 +19,7 @@ Bearer authentication is not implemented. No caller-supplied owner ID is accepte
 
 | Frontend path | Backend path | Methods |
 | --- | --- | --- |
-| `/api/public-profile` | `/api/profiles/me` | GET own public profile/null; PATCH create/update explicit public fields |
+| `/api/public-profile` | `/api/profiles/me` | GET own public profile/null; PATCH create/update explicit public fields; POST publish after saving skills |
 | `/api/skills` | `/api/skills` | GET full visible canonical catalog |
 | `/api/user-skills` | `/api/user-skills` | GET own listings; POST add; DELETE remove |
 | `/api/discover` | `/api/discover` | GET reciprocal recommendations |
@@ -28,6 +28,9 @@ Public-profile PATCH accepts only `display_name` and `bio`. The name is trimmed
 and must have 2–80 Unicode characters; bio is trimmed and at most 500. The server
 inserts a missing own profile or updates only its display_name/bio columns, never
 its immutable ID. No city, private account data, or Auth metadata is copied.
+The onboarding flow publishes the profile only after at least one teach skill and
+one learn skill have been saved. Publication is enforced by the authenticated
+`publish_my_public_profile` database function.
 
 User-skills POST/DELETE accept only `skill_id` (canonical lowercase UUID) and
 `direction` (`teach` or `learn`). POST requires an own public profile and a visible
