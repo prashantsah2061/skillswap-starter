@@ -1,31 +1,53 @@
 "use client";
 
 import { useReducedEffects } from "./motion-preferences";
-
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import { ArrowRight, Check, Eye, EyeOff, LoaderCircle, LockKeyhole, Mail, ShieldCheck, Sparkles, CircleAlert, Globe2, ArrowUpRight } from "lucide-react";
+import { ArrowRight, Check, Eye, EyeOff, LoaderCircle, LockKeyhole, Mail, CircleAlert } from "lucide-react";
 import { Logo } from "@/components/demo/ui";
 import { loginAction, googleAction } from "@/lib/auth/actions";
-import { SkillScene } from "./skill-scene";
-import { AnimatedHeadline, LoginAtmosphere } from "./login-atmosphere";
+import { SkillAvatar } from "./skill-avatar";
+import { communitySkills } from "./skill-community-data";
+import { LoginAtmosphere } from "./login-atmosphere";
 import "./login.css";
 
-function Reveal({ children, delay = 0 }: { children: ReactNode; delay?: number }) {
+function LoginMascot({ covered, typing }: { covered: boolean; typing: boolean }) {
   const reduced = useReducedEffects();
-  return <motion.div initial={{ opacity: 0, y: reduced ? 0 : 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .45, delay: reduced ? 0 : delay, ease: "easeOut" }}>{children}</motion.div>;
+  return <motion.svg className="login-mascot" viewBox="0 0 160 136" role="img" aria-label="A friendly SkillSwap character">
+    <ellipse cx="80" cy="126" rx="43" ry="6" fill="#5b477d" opacity=".1" />
+    <motion.g animate={reduced ? undefined : { y: [0, -3, 0] }} transition={{ duration: 3.8, repeat: Infinity, ease: "easeInOut" }}>
+      <path d="M42 80c0-24 17-39 38-39s38 15 38 39v31H42Z" fill="#a48bd1" />
+      <path d="M51 75c0-23 12-39 29-39s29 16 29 39v13H51Z" fill="#f1c9a9" />
+      <path d="M49 62c3-21 13-34 31-34s28 13 31 34c-8-7-16-13-21-25-8 12-22 21-41 25Z" fill="#554569" />
+      <path d="M55 91c9 9 41 9 50 0v20H55Z" fill="#9479c3" />
+      <motion.g animate={covered ? { opacity: 0 } : { opacity: 1 }} transition={{ duration: reduced ? 0 : .18 }}>
+        <ellipse cx={typing ? 66 : 69} cy="70" rx="2.8" ry="4" fill="#393344" />
+        <ellipse cx={typing ? 88 : 91} cy="70" rx="2.8" ry="4" fill="#393344" />
+        <path d="M73 81q7 6 14 0" fill="none" stroke="#995f65" strokeWidth="2" strokeLinecap="round" />
+      </motion.g>
+      <AnimatePresence>
+        {covered && <motion.g key="hands" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }} transition={{ duration: reduced ? 0 : .2 }}>
+          <path d="M54 78c-3-12 0-19 6-19 5 0 7 5 8 12l1 10" fill="#f1c9a9" stroke="#dcaa8f" strokeWidth="2" />
+          <path d="M106 78c3-12 0-19-6-19-5 0-7 5-8 12l-1 10" fill="#f1c9a9" stroke="#dcaa8f" strokeWidth="2" />
+        </motion.g>}
+      </AnimatePresence>
+      <motion.g className="login-mascot-wave" initial={{ rotate: 0 }} animate={reduced ? { rotate: 0 } : { rotate: [0, -25, 9, -22, 0] }} transition={{ duration: reduced ? 0 : 1.05, delay: reduced ? 0 : .25, ease: "easeInOut" }} style={{ transformOrigin: "116px 88px" }}>
+        <path d="M108 89q8-9 13-21l8 4q-3 14-11 23" fill="#f1c9a9" stroke="#dcaa8f" strokeWidth="2" strokeLinejoin="round" />
+      </motion.g>
+    </motion.g>
+  </motion.svg>;
 }
 
 function LoginContent({ oauthError, confirmationError, signInNotice }: { oauthError: boolean; confirmationError: boolean; signInNotice: boolean }) {
   const router = useRouter();
   const reduced = useReducedEffects();
   const [visible, setVisible] = useState(false);
+  const [typing, setTyping] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "oauth" | "success" | "error">(oauthError || confirmationError ? "error" : "idle");
   const [error, setError] = useState(confirmationError ? "This email link could not be verified. If you already confirmed your email, sign in below. Otherwise, use the latest confirmation email." : oauthError ? "Sign-in couldn’t be completed. Please try again or sign in with email." : "");
   const destination = useRef("/dashboard");
-  const [remember, setRemember] = useState(true);
   const busy = useRef(false);
   const mounted = useRef(true);
   const errorRef = useRef<HTMLDivElement>(null);
@@ -48,7 +70,7 @@ function LoginContent({ oauthError, confirmationError, signInNotice }: { oauthEr
     }
     busy.current = true; setStatus("loading"); setError("");
     try {
-      const result = await loginAction({ email, password, remember });
+      const result = await loginAction({ email, password, remember: true });
       if (!mounted.current) return;
       if (result.error) { setError(result.error); setStatus("error"); busy.current = false; return; }
       destination.current = "next" in result ? result.next : "/dashboard";
@@ -62,7 +84,7 @@ function LoginContent({ oauthError, confirmationError, signInNotice }: { oauthEr
     if (busy.current) return;
     busy.current = true; setStatus("oauth"); setError("");
     try {
-      const result = await googleAction(remember);
+      const result = await googleAction(true);
       if (result.error || !("url" in result) || !result.url) throw new Error("OAuth unavailable");
       window.location.assign(result.url);
     } catch {
@@ -72,36 +94,39 @@ function LoginContent({ oauthError, confirmationError, signInNotice }: { oauthEr
     }
   }
   const disabled = status === "loading" || status === "oauth" || status === "success";
-  return (
-    <LoginAtmosphere>
-      <Reveal><header className="login-header flex items-center justify-between"><Logo href="/login" /></header></Reveal>
-      <div className="login-grid">
-        <section className="login-story">
-          <Reveal delay={.12}><span className="login-eyebrow"><Sparkles size={12} /> YOUR NEXT CHAPTER STARTS HERE</span></Reveal>
-          <Reveal delay={.2}><AnimatedHeadline /></Reveal>
-          <Reveal delay={.28}><p className="login-intro">Your knowledge is someone else’s next breakthrough.<br className="desktop-break" /> Trade skills, spark ideas, and find your people.</p></Reveal>
-          <SkillScene />
-          <Reveal delay={.65}><div className="story-note"><span className="note-icon"><Globe2 size={17} /></span><p>A world of possibilities. A simple exchange.<br /><strong>Everyone has something worth sharing.</strong></p><span className="story-tag">LEARN ↔ TEACH</span></div></Reveal>
-        </section>
-        <section className="login-form-section" aria-labelledby="login-title">
-          <Reveal delay={.12}><div className="login-form-card">
-            <Reveal delay={.18}><div className="panel-heading-row"><span className="login-welcome-icon"><Sparkles size={22} strokeWidth={1.6} /></span><span className="panel-kicker">GOOD TO SEE YOU AGAIN</span></div><h2 id="login-title">Welcome back<span>.</span></h2><p className="login-subtitle">Your next great exchange is waiting.</p></Reveal>
-            {signInNotice && <div className="login-notice" role="status"><Mail size={18} aria-hidden="true" /><p>Finish signing in with your email and password. Your email may already be confirmed, even though automatic sign-in couldn’t finish.</p></div>}
-            <form onSubmit={submit} noValidate aria-busy={disabled}>
-              <Reveal delay={.25}><label htmlFor="login-email">Email address</label><div className="login-input-wrap"><Mail size={18} aria-hidden="true" /><input id="login-email" name="email" type="email" autoComplete="email" placeholder="you@example.com" required disabled={disabled} aria-describedby={error ? "login-error" : undefined} /></div></Reveal>
-              <Reveal delay={.32}><div className="login-label-row"><label htmlFor="login-password">Password</label></div><div className="login-input-wrap"><LockKeyhole size={18} aria-hidden="true" /><input id="login-password" name="password" type={visible ? "text" : "password"} autoComplete="current-password" placeholder="Enter your app password" required disabled={disabled} aria-describedby={error ? "login-error" : undefined} /><motion.button type="button" className="login-eye" aria-label={visible ? "Hide password" : "Show password"} aria-pressed={visible} onClick={() => setVisible(v => !v)} whileTap={reduced ? undefined : { scale: .85 }}><AnimatePresence mode="wait" initial={false}><motion.span key={String(visible)} initial={{ opacity: 0, rotate: -15 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0 }} transition={{ duration: .12 }}>{visible ? <EyeOff size={18} /> : <Eye size={18} />}</motion.span></AnimatePresence></motion.button></div></Reveal>
-              <Reveal delay={.35}><div className="login-options"><label className="remember-option"><input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} disabled={disabled} /> Remember me</label><Link href="/forgot-password">Forgot password?</Link></div></Reveal>
-              <AnimatePresence initial={false}>{error && <motion.div key="error" id="login-error" className="login-error" role="alert" ref={errorRef} tabIndex={-1} initial={{ opacity: 0, y: reduced ? 0 : -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><CircleAlert size={17} /><span>{error}</span></motion.div>}</AnimatePresence>
-              <Reveal delay={.39}><motion.button className="login-submit" type="submit" disabled={disabled} whileHover={disabled || reduced ? undefined : { scale: 1.015, boxShadow: "0 10px 26px #4f6f5d40" }} whileTap={disabled || reduced ? undefined : { scale: .985 }}><AnimatePresence mode="wait" initial={false}><motion.span key={status === "success" ? "success" : status === "loading" ? "loading" : "idle"} className="inline-flex items-center justify-center gap-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: .12 }}>{status === "loading" ? <><LoaderCircle size={18} className="login-spinner" />Signing in…</> : status === "success" ? <><motion.span initial={{ scale: reduced ? 1 : .4 }} animate={{ scale: 1 }}><Check size={20} /></motion.span>You’re in! Taking you there…</> : <>Sign in <ArrowRight size={17} /></>}</motion.span></AnimatePresence></motion.button></Reveal>
-              <span className="sr-only" role="status">{status === "success" ? "Signed in successfully. Redirecting to dashboard." : status === "oauth" ? "Connecting to Google. Please wait." : status === "loading" ? "Signing in. Please wait." : ""}</span>
-            </form>
-            <Reveal delay={.44}><div className="login-divider"><span />or use your Google account<span /></div><button type="button" className="login-google" onClick={googleLogin} disabled={disabled}>{status === "oauth" ? <LoaderCircle size={18} className="login-spinner" /> : <GoogleIcon />} {status === "oauth" ? "Connecting to Google…" : "Continue with Google"}<ArrowUpRight size={15} /></button><p className="login-demo-caption">Google manages your Google password. Email login uses a SkillSwap password.</p><p className="login-signup">New here? <Link href="/signup">Join SkillSwap <ArrowRight size={13} /></Link></p></Reveal>
-          </div><p className="login-secure"><ShieldCheck size={14} /> Secure sign-in, powered by Supabase</p></Reveal>
-        </section>
-      </div>
-      <footer className="login-footer"><span>HUMAN CONNECTION. LIMITLESS POTENTIAL.</span><span><span className="live-dot" /> Built for curious minds.</span></footer>
-    </LoginAtmosphere>
-  );
+  return <LoginAtmosphere>
+    <main className="login-layout">
+      <section className="login-story" aria-label="About SkillSwap">
+        <Logo href="/login" />
+        <h1>Learn. Share. Connect.</h1>
+        <div className="login-skill-art" aria-hidden="true">
+          {[communitySkills[0], communitySkills[3], communitySkills[8]].map((skill, index) => <div key={skill.id} className={`login-skill login-skill-${index + 1}`}><SkillAvatar skill={skill} /></div>)}
+          <div className="login-art-logo"><Logo href="/login" /></div>
+          <span className="login-art-orbit" />
+        </div>
+      </section>
+
+      <section className="login-form-section" aria-labelledby="login-title">
+        <div className="login-mobile-brand"><Logo href="/login" /></div>
+        <LoginMascot covered={!visible} typing={typing} />
+        <div className="login-form-card">
+          <h2 id="login-title">Welcome back,</h2>
+          {signInNotice && <div className="login-notice" role="status"><Mail size={18} aria-hidden="true" /><p>Finish signing in with your email and password. Your email may already be confirmed, even though automatic sign-in couldn’t finish.</p></div>}
+          <form onSubmit={submit} noValidate aria-busy={disabled}>
+            <div className="login-field"><label htmlFor="login-email">Email</label><div className="login-input-wrap"><Mail size={18} aria-hidden="true" /><input id="login-email" name="email" type="email" autoComplete="email" placeholder="you@example.com" required disabled={disabled} aria-describedby={error ? "login-error" : undefined} onChange={() => setTyping(true)} onFocus={() => setTyping(true)} onBlur={() => setTyping(false)} /></div></div>
+            <div className="login-field"><label htmlFor="login-password">Password</label><div className="login-input-wrap"><LockKeyhole size={18} aria-hidden="true" /><input id="login-password" name="password" type={visible ? "text" : "password"} autoComplete="current-password" placeholder="Enter your password" required disabled={disabled} aria-describedby={error ? "login-error" : undefined} onChange={() => setTyping(true)} onFocus={() => setTyping(true)} onBlur={() => setTyping(false)} /><button type="button" className="login-eye" aria-label={visible ? "Hide password" : "Show password"} aria-pressed={visible} onClick={() => setVisible(v => !v)}>{visible ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>
+            <div className="login-options"><span /><Link href="/forgot-password">Forgot password?</Link></div>
+            <AnimatePresence initial={false}>{error && <motion.div key="error" id="login-error" className="login-error" role="alert" ref={errorRef} tabIndex={-1} initial={{ opacity: 0, y: reduced ? 0 : -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><CircleAlert size={17} /><span>{error}</span></motion.div>}</AnimatePresence>
+            <motion.button className="login-submit" type="submit" disabled={disabled} whileHover={disabled || reduced ? undefined : { y: -1 }} whileTap={disabled || reduced ? undefined : { scale: .99 }}><AnimatePresence mode="wait" initial={false}><motion.span key={status === "success" ? "success" : status === "loading" ? "loading" : "idle"} className="inline-flex items-center justify-center gap-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: .12 }}>{status === "loading" ? <><LoaderCircle size={18} className="login-spinner" />Signing in…</> : status === "success" ? <><Check size={20} />You’re in! Taking you there…</> : <>Sign in <ArrowRight size={17} /></>}</motion.span></AnimatePresence></motion.button>
+            <span className="sr-only" role="status">{status === "success" ? "Signed in successfully. Redirecting to dashboard." : status === "oauth" ? "Connecting to Google. Please wait." : status === "loading" ? "Signing in. Please wait." : ""}</span>
+          </form>
+          <div className="login-divider"><span />or<span /></div>
+          <button type="button" className="login-google" onClick={googleLogin} disabled={disabled}>{status === "oauth" ? <LoaderCircle size={18} className="login-spinner" /> : <GoogleIcon />} {status === "oauth" ? "Connecting to Google…" : "Continue with Google"}</button>
+          <p className="login-signup">New here? <Link href="/signup">Sign up</Link></p>
+        </div>
+      </section>
+    </main>
+  </LoginAtmosphere>;
 }
 
 function GoogleIcon() {
