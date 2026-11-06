@@ -1,17 +1,30 @@
 # Database setup
 
-This folder contains a proposed first schema, not an already provisioned database.
-The migration has not been executed against your Supabase project.
+This folder contains the versioned database schema and migrations. A committed
+migration file is not proof it has been applied to your Supabase project. Check
+the project's migration history before applying any of them.
 
 Beginner path:
-1. Create a separate Supabase development project.
-2. Open the SQL Editor.
-3. Paste the contents of migrations/202609210001_initial_schema.sql and run once.
-4. Run seed.sql separately.
-5. Inspect all six tables in Table Editor.
-6. Confirm RLS is enabled for all six tables.
-7. Create test users with Auth, then insert each user's own profile through an authenticated session.
-8. Test permissions with those user sessions, not just SQL Editor (which has elevated privileges).
+1. Use a separate Supabase development project.
+2. Check whether the original public schema migration has already been applied.
+   If not, review and apply `migrations/202609210001_initial_schema.sql` once.
+3. Run `seed.sql` to add the canonical skill catalog (safe to repeat).
+4. Check whether `account_profiles` exists. If not, review and apply
+   `migrations/202610280001_private_account_profiles.sql` once.
+5. Apply `migrations/20261106205430_matching_messaging.sql` to enable atomic,
+   authenticated swipe decisions and reciprocal match creation.
+6. Apply `migrations/20261106210208_session_scheduling.sql` to enable member-only
+   session proposals and transitions.
+7. Apply `migrations/20261106211146_user_safety_controls.sql` to enable blocking,
+   user reports, and hidden-profile enforcement.
+8. Inspect all public tables plus `account_profiles` in Table Editor, and
+   confirm RLS is enabled. The skill catalog should show the seed entries.
+   For a read-only SQL Editor summary of tables, policies, catalog entries, and
+   RPC grants, run `verify_setup.sql`.
+9. Create test users through Auth, then verify onboarding, discovery, swipes,
+   matches, messages, and session transitions using two separate browser sessions.
+10. Test isolation with a third non-member account; SQL Editor uses elevated
+   privileges and is not a substitute for these user-session checks.
 
 Team rule: keep every database change in a NEW timestamped migration file. Do not
 silently modify an already applied migration. One person applies migrations to the
@@ -28,9 +41,10 @@ Profiles are visible to signed-in members. Store no email address, phone number,
 password, or other private account fields in these public profile rows.
 Auth manages credentials separately in auth.users.
 
-Swipes and matches deliberately cannot be written by normal clients yet. Implement
-and test the atomic matching function described in docs/04-BUILD-ORDER.md before
-connecting the swipe buttons. Do not fix the restriction by granting broad writes.
+Direct swipe and match table writes remain blocked. The matching migration gives
+authenticated users execute access to `record_swipe`, which derives the actor
+from the verified database session and creates matches atomically. Do not loosen
+table grants to bypass this function.
 
 ## Private account profiles (authentication review)
 

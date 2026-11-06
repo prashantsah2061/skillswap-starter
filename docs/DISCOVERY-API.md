@@ -4,8 +4,9 @@
 selections. `/discover` now uses persisted reciprocal listings, without a demo
 fallback. Both reuse existing cards, forms, badges, and navigation. The private
 account-profile screen links to public onboarding instead of editing browser-only
-skills. Other match/message/session screens remain sample content; interest,
-mutual-match creation and messaging are not implemented here. The optional,
+skills. Swipe decisions, mutual matches, messages, and session scheduling are
+persisted by authenticated backend APIs. Live session rooms remain sample
+content. The optional,
 disabled-by-default [semantic matcher](SEMANTIC-MATCHING.md) adds evaluated
 related-skill scoring and snapshot ranking; this page describes the exact baseline.
 
@@ -118,8 +119,19 @@ PostgreSQL tests cover the original schema and existing grants:
 - Profile insert/update policies require auth.uid()=id; UPDATE grants cover
   display_name/bio, not id. Skill insert/delete policies require own user_id;
   UPDATE covers only level. The APIs use precisely these permitted operations.
-- Swipe reads are actor-only and explicitly actor-filtered. Swipe/match writes
-  still lack grants and an atomic authorized matching RPC.
+- Swipe reads are actor-only and explicitly actor-filtered. Direct swipe/match
+  writes remain blocked; the additive matching migration grants authenticated
+  users only the `record_swipe` RPC. It derives the actor from `auth.uid()`, makes
+  the first decision immutable, serializes both directions on the canonical pair,
+  and inserts one match after mutual likes.
+- Match reads are member-only. Message reads/inserts are restricted to match
+  members; the API checks membership before paginated reads or sends.
+- Blocked users are excluded in both directions from public profile/listing reads,
+  discovery, matches, messages, and sessions. Direct swipe/match/message/session
+  RPC calls also check the block relationship.
+- Database-backed quotas limit swipes to 60/minute, messages to 20/minute,
+  session state changes to 10/day, and reports to 5/day. Supabase Auth provider
+  rate limits and CAPTCHA settings still require dashboard configuration.
 - No hidden/blocked flags exist. Future RLS restrictions remain authoritative;
   no service-role client is used to bypass them.
 

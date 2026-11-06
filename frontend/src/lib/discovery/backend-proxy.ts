@@ -7,7 +7,7 @@ function failure(status: number, code: string, message: string) {
 }
 
 // Called only with a fixed path from a Route Handler, never a user-selected URL.
-export async function backendProxy(request: Request, path: "/api/discover" | "/api/profiles/me" | "/api/skills" | "/api/user-skills") {
+export async function backendProxy(request: Request, path: "/api/discover" | "/api/profiles/me" | "/api/skills" | "/api/user-skills" | "/api/swipes" | "/api/matches" | "/api/sessions" | "/api/blocks" | "/api/reports" | `/api/matches/${string}/messages`) {
   try {
     const configured = process.env.SKILLSWAP_BACKEND_URL;
     if (!configured) return failure(503, "DISCOVERY_UNAVAILABLE", "Discovery is temporarily unavailable.");

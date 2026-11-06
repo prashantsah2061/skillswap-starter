@@ -1001,6 +1001,105 @@ legend {
 .session-card > p {
   font-size: 13px;
 }
+.sessions-list {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+.session-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.session-card-heading .eyebrow {
+  margin-bottom: 7px;
+}
+.session-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  margin-top: 16px;
+}
+.session-reschedule {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 10px;
+  width: 100%;
+}
+.session-reschedule label {
+  display: grid;
+  gap: 7px;
+}
+.session-proposal {
+  display: grid;
+  gap: 14px;
+  max-width: 680px;
+  margin-bottom: 22px;
+}
+.session-proposal > label {
+  display: grid;
+  gap: 7px;
+}
+.session-proposal input,
+.session-proposal select,
+.session-proposal textarea,
+.session-reschedule input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 12px 14px;
+}
+.safety-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-top: 12px;
+}
+.safety-report-form {
+  display: grid;
+  gap: 10px;
+  width: min(100%, 420px);
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.safety-report-form label {
+  display: grid;
+  gap: 6px;
+}
+.safety-report-form textarea,
+.safety-report-form select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 10px 12px;
+}
+.blocked-members-list {
+  display: grid;
+  gap: 12px;
+  max-width: 680px;
+}
+.blocked-member {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.blocked-member > div:nth-child(2) {
+  flex: 1;
+}
+.blocked-member h2 {
+  font-size: 18px;
+}
 .session-plan {
   display: flex;
   gap: 16px;

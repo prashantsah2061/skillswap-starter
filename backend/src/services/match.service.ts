@@ -1,5 +1,11 @@
 import "server-only";
-// TODO: call one atomic database function to record a swipe and create a mutual match.
-// Route validates input -> service applies business rules -> model queries Supabase.
-// Do not create a global server Supabase client or use a service-role key here.
-export {};
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { matchModel } from "../models/match.model";
+import { swipeModel } from "../models/swipe.model";
+
+export async function recordSwipe(client: SupabaseClient, targetId: string, decision: "like" | "pass") {
+  return swipeModel(client).record(targetId, decision);
+}
+
+export const listMatches = (client: SupabaseClient, actorId: string) =>
+  matchModel(client).list(actorId);

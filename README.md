@@ -1,6 +1,6 @@
 # SkillSwap
 
-A responsive capstone app for exchanging skills, with separate frontend and backend workspaces. Supabase supports authentication, private account profiles, explicit public skill onboarding, and reciprocal discovery. Matching, messaging, and sessions still include sample content; calls remain simulated.
+A responsive capstone app for exchanging skills, with separate frontend and backend workspaces. Supabase supports authentication, private account profiles, explicit public skill onboarding, reciprocal discovery, persistent swipes and mutual matches, match-only messaging, session scheduling, blocking, and reports. Live calls remain a demo feature.
 
 ## Folder structure
 
@@ -67,7 +67,7 @@ The backend uses http://localhost:3002. `/api/health` reports scaffold status; u
 
 ## Frontend features
 
-Real Supabase email/password and Google authentication, verified password recovery, MFA, private editable profiles, explicit public profiles with canonical teach/learn selections, and authenticated reciprocal discovery. Matching, messaging, and session screens still include fictional browser-based examples. Passwords are managed by Supabase Auth and are never stored in application tables or browser preferences.
+Real Supabase email/password and Google authentication, verified password recovery, MFA, private editable profiles, explicit public profiles with canonical teach/learn selections, authenticated reciprocal discovery, persistent swipe decisions and mutual matches, match-only messages, session scheduling, member blocking, reports, and database-backed action quotas. Live calls remain a fictional browser-based example. Apply the database migrations and seed catalog in `backend/supabase/` before using database-backed features. Passwords are managed by Supabase Auth and are never stored in application tables or browser preferences.
 
 See [Frontend demo guide](docs/FRONTEND-DEMO.md) for routes, interactions, and verification. See [Architecture](docs/01-ARCHITECTURE.md) for the preserved backend integration plan.
 

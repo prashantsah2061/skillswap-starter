@@ -16,6 +16,16 @@ const discovery = z.object({
 });
 export type PublicSkill = z.infer<typeof skill>;
 export type PublicSelection = Pick<z.infer<typeof listing>, "skill_id" | "direction">;
+const matchSummary = z.object({ id: uuid, created_at: z.string(), partner: publicProfile });
+const message = z.object({ id: uuid, match_id: uuid, sender_id: uuid, body: z.string(), created_at: z.string(), mine: z.boolean() });
+const session = z.object({
+  id: uuid, match_id: uuid, status: z.enum(["proposed", "confirmed", "reschedule_requested", "cancelled", "completed"]),
+  scheduled_at: z.string(), proposed_at: z.string().nullable(), duration_minutes: z.number().int(), notes: z.string(),
+  created_at: z.string(), updated_at: z.string(), partner: publicProfile, mine: z.boolean(), can_accept: z.boolean(),
+});
+export type MatchSummary = z.infer<typeof matchSummary>;
+export type PersistedMessage = z.infer<typeof message>;
+export type SessionSummary = z.infer<typeof session>;
 export class PublicApiError extends Error {
   constructor(public readonly status: number, public readonly code: string, message: string) { super(message); }
 }
@@ -66,4 +76,41 @@ export async function savePublicOnboarding(profile: { display_name: string; bio:
 
 export function loadDiscovery(cursor: string | null = null, signal?: AbortSignal) {
   return api(`/api/discover?limit=20${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`, discovery, { signal });
+}
+
+export function recordSwipe(target_id: string, decision: "like" | "pass") {
+  return api("/api/swipes", z.object({ data: z.object({ matched: z.boolean(), match_id: uuid.nullable() }) }), write("POST", { target_id, decision }));
+}
+
+export function loadMatches(signal?: AbortSignal) {
+  return api("/api/matches", z.object({ data: z.array(matchSummary) }), { signal });
+}
+
+export function loadMessages(matchId: string, cursor: string | null = null, signal?: AbortSignal) {
+  const query = cursor ? `?limit=30&cursor=${encodeURIComponent(cursor)}` : "?limit=30";
+  return api(`/api/matches/${matchId}/messages${query}`, z.object({ data: z.array(message), meta: z.object({ next_cursor: z.string().nullable() }) }), { signal });
+}
+
+export function sendMessage(matchId: string, body: string) {
+  return api(`/api/matches/${matchId}/messages`, z.object({ data: message }), write("POST", { body }));
+}
+
+export function loadSessions(signal?: AbortSignal) {
+  return api("/api/sessions", z.object({ data: z.array(session) }), { signal });
+}
+
+export function changeSession(input: unknown) {
+  return api("/api/sessions", z.object({ data: z.unknown() }), write("POST", input));
+}
+
+export function blockUser(target_id: string, action: "block" | "unblock" = "block") {
+  return api("/api/blocks", z.object({ data: z.object({ target_id: uuid, action: z.enum(["block", "unblock"]) }) }), write("POST", { target_id, action }));
+}
+
+export function loadBlockedProfiles(signal?: AbortSignal) {
+  return api("/api/blocks", z.object({ data: z.array(z.object({ user_id: uuid, display_name: z.string(), created_at: z.string() })) }), { signal });
+}
+
+export function reportUser(input: { reported_id: string; match_id?: string; reason: "spam" | "harassment" | "unsafe" | "impersonation" | "other"; details: string }) {
+  return api("/api/reports", z.object({ data: z.object({ id: uuid, created_at: z.string() }) }), write("POST", input));
 }

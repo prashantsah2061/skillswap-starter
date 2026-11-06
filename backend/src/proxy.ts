@@ -8,7 +8,8 @@ export async function proxy(request: NextRequest) {
   catch (error) {
     // A partial Supabase configuration or refresh outage must preserve the public APIs'
     // operational-error contract even when it occurs before the route executes.
-    if (!["/api/discover", "/api/profiles/me", "/api/skills", "/api/user-skills"].includes(request.nextUrl.pathname)) throw error;
+    if (!["/api/discover", "/api/profiles/me", "/api/skills", "/api/user-skills", "/api/swipes", "/api/matches", "/api/sessions", "/api/blocks", "/api/reports"].includes(request.nextUrl.pathname)
+      && !/^\/api\/matches\/[0-9a-f-]{36}\/messages$/.test(request.nextUrl.pathname)) throw error;
     const failure = unavailable();
     return NextResponse.json({ error: { code: failure.code, message: failure.message } }, {
       status: failure.status, headers: { "Cache-Control": "private, no-store" },

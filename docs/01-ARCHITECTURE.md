@@ -1,6 +1,6 @@
 # SkillSwap architecture
 
-The repository contains two independent Next.js applications managed with npm workspaces. The frontend uses local demo state. The backend remains the preserved starter scaffold and is not connected to the frontend.
+The repository contains two independent Next.js applications managed with npm workspaces. The frontend proxies authenticated public-profile, skills, discovery, swipe, match, messaging, and session requests to the backend. Supabase Auth and private account profiles are handled by the frontend directly. The live-call room still uses local demo state.
 
 ## Responsibilities
 
@@ -8,9 +8,9 @@ The repository contains two independent Next.js applications managed with npm wo
 | --- | --- |
 | `frontend/src/app/` | Frontend pages and layouts |
 | `frontend/src/components/` | Reusable UI and feature components |
-| `frontend/src/lib/` | Fictional demo fixtures and frontend-only helpers |
+| `frontend/src/lib/` | Supabase Auth/profile helpers, API proxies, and remaining demo fixtures |
 | `frontend/public/` | Local images and static assets |
-| `backend/src/app/api/` | Existing backend route handlers |
+| `backend/src/app/api/` | Authenticated profile, skill, discovery, swipe, match, and message route handlers |
 | `backend/src/app/auth/` | Existing email-confirmation route scaffold |
 | `backend/src/services/` | Future business rules |
 | `backend/src/models/` | Future data-access implementation |
@@ -27,15 +27,15 @@ Each application owns its package manifest, TypeScript config, and Next.js confi
 
 ## Current demo behavior
 
-The frontend runs on port 3000 and requires no backend server or Supabase credentials. Mock data lives in `frontend/src/lib/frontend-data.ts`; shared React state and validated localStorage restoration live in `frontend/src/components/demo/demo-provider.tsx`.
+The frontend runs on port 3000. Auth, private profiles, onboarding, discovery, matching, and messaging need Supabase configuration and database migrations. Remaining demo data lives in `frontend/src/lib/frontend-data.ts`; shared React state and validated localStorage restoration live in `frontend/src/components/demo/demo-provider.tsx`.
 
-The backend scaffold runs separately on port 3002. Its `/api/health` endpoint reports scaffold status without checking the database. Unimplemented feature endpoints return HTTP 501. Optional backend Supabase configuration belongs in `backend/.env.local`.
+The backend runs separately on port 3002. Its `/api/health` endpoint reports process status without checking the database. Remaining unimplemented endpoints return HTTP 501. Backend Supabase configuration belongs in `backend/.env.local`.
 
 ## Future integration
 
-To connect real features later, configure a backend API URL for the frontend, implement authentication and endpoint authorization, and choose an appropriate CORS/cookie strategy for separate origins. The frontend should communicate with backend endpoints rather than importing backend models or services.
+The frontend communicates with fixed same-origin API routes, which forward requests to the backend and preserve session cookies. Both apps use request-scoped authenticated Supabase clients; RLS remains authoritative.
 
-A future swipe flow would send a decision to the backend, validate the authenticated actor, execute a transactional reciprocal-match rule, and return a result to the frontend. Message persistence, invitations, and real sessions also remain future backend work.
+The swipe flow calls one transaction-safe RPC that makes the first decision immutable and creates one canonical match after reciprocal likes. Message reads and sends verify match membership and use stable cursor pagination. Session proposals and state transitions use a separate database function that verifies match membership and locks each session row.
 
 ## Conventions
 

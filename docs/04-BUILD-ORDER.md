@@ -2,8 +2,9 @@
 
 # Implementation milestones
 
-Complete each milestone before depending on its unfinished behavior. The scaffold
-is the starting point; the steps below are work for your capstone team.
+Complete each milestone before depending on its unfinished behavior. Milestones
+4 and 5 now have local implementations; they still require the matching migration
+to be applied to the configured Supabase project and a two-account live walkthrough.
 
 ## Milestone 1 — Understand and customize the layout
 
@@ -62,7 +63,7 @@ The scaffold deliberately provides no global server client: each request gets it
 Generate Supabase Database types after applying migrations, replacing the placeholder
 shared/types/database.ts. Add that type to the client factories for typed database queries.
 
-## Milestone 4 — Discovery and matching
+## Milestone 4 — Discovery and matching (matching code implemented)
 
 1. Replace fictional discovery data with a server-side query.
 2. Exclude the signed-in user, incomplete profiles, and already-swiped profiles.
@@ -84,10 +85,10 @@ shared/types/database.ts. Add that type to the client factories for typed databa
 13. Enable the card buttons and display the API result. A lone like is not a match.
 14. Test A likes B, B likes A, repeated clicks, simultaneous likes, pass, and self-like.
 
-This function is intentionally not supplied as pretend-finished logic in the scaffold.
-The migration's read-only swipe/match grants make the incomplete state explicit.
+The function and API are implemented in the local migration and backend route.
+They remain unavailable on a Supabase project until that migration is applied.
 
-## Milestone 5 — Messaging
+## Milestone 5 — Messaging (API and UI implemented)
 
 1. Load own matches with partner display details.
 2. Open /messages/[matchId] when selecting a match.
@@ -102,14 +103,25 @@ The migration's read-only swipe/match grants make the incomplete state explicit.
     filter subscriptions by match ID and unsubscribe on unmount.
 11. Test with two browser profiles plus a third unauthorized user.
 
-## Milestone 6 — Complete the capstone demo
+The API, cursor pagination, UI, and match-membership checks are implemented.
+The database migration and two-user live verification remain deployment steps.
+
+## Milestone 6 — Sessions and launch readiness
+
+Session proposals and transitions are implemented in a second migration. Live
+video, reporting, blocking, rate limiting, provider setup, and production hosting
+remain before a public launch.
 
 1. Add empty and error states to each page.
 2. Add keyboard access and labels; don't make drag/swipe the only interaction.
 3. Check a narrow phone layout.
-4. Add rate limiting and review auth/password recovery behavior before public use.
-5. Decide whether avatars, scheduling, reviews, reports, and blocking fit your time.
-   They are outside this minimal scaffold. A public launch needs abuse controls.
+4. Application-level swipe, message, and session limits are enforced in Postgres.
+   Configure and verify Supabase Auth provider rate limits and CAPTCHA settings
+   before public use; CAPTCHA is not implemented in the app.
+5. Scheduling has a persisted proposal/accept/reschedule/cancel/complete flow.
+   Blocking, reporting, and database-backed action quotas are implemented. A
+   public launch still needs a moderation workflow, email/provider settings,
+   production hosting, backups, and monitoring.
 6. Separate development/test data from a production project.
 7. Configure the deployment environment and exact auth redirect URLs.
 8. Run the lint/type/build checks and the test checklist.

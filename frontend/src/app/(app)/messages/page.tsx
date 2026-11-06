@@ -1,5 +1,5 @@
 import { requireUser } from "@/lib/auth/require-user";
-import { Messages } from "@/components/demo/messages";
+import { Messages } from "@/components/messages/messages";
 export default async function Page() {
   await requireUser();
 

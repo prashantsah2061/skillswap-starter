@@ -42,6 +42,7 @@ export function SiteNav() {
           </summary>
           <div>
             <Link href="/profile">Your profile</Link>
+            <Link href="/settings/blocked">Blocked members</Link>
             <Link href="/security">Account security</Link>
             <LogoutButton />
           </div>

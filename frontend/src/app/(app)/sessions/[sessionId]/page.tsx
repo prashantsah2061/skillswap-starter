@@ -1,5 +1,5 @@
 import { requireUser } from "@/lib/auth/require-user";
-import { SessionRoom } from "@/components/demo/session-room";
+import { Sessions } from "@/components/sessions/sessions";
 export default async function Page({
   params,
 }: {
@@ -8,5 +8,5 @@ export default async function Page({
   await requireUser();
 
   const { sessionId } = await params;
-  return <SessionRoom id={sessionId} />;
+  return <Sessions selectedId={sessionId} />;
 }

@@ -13,6 +13,9 @@
 | swipes | A person's like/pass decision | Actor and target are profiles; self-swipe prohibited |
 | matches | A mutually interested pair | Canonically ordered unique user pair |
 | messages | Messages inside a match | Sender profile and parent match |
+| skill_sessions | Proposed or completed skill exchanges | Match participants and proposal state |
+| user_blocks | Member blocks | Block owner and hidden target |
+| user_reports | Moderation reports | Reporter, reported profile, optional match |
 
 Using user_skills avoids comma-separated skill strings and lets you filter and join.
 One person may teach Python and learn Guitar. The direction field separates those
@@ -26,16 +29,19 @@ relationships. Skill level is self-reported, not a verified qualification.
 - People can read only their own outgoing swipes.
 - People can read only matches they belong to.
 - People can read/send messages only in their matches; sender_id must be their own.
-- Swipe/match inserts are blocked pending the atomic matching function.
+- People can read sessions in their matches; session state changes use the membership-checked RPC.
+- People can block/unblock members; blocked pairs disappear from discovery, matches, messages, and sessions.
+- Reports are private to the reporter and MFA-protected admins. Admins review them through the Supabase dashboard; this starter has no moderation UI.
+- Direct swipe/match writes are blocked; authenticated swipe decisions use one atomic matching function.
 - Only catalog maintainers via trusted administration add catalog skills in version 1.
 - No message edit/delete or account-delete flow is included yet.
 
 ## Planned endpoints
 
-Health, authenticated own public profiles, catalog/user-skills, and read-only discovery are implemented. Other endpoints
-below remain scaffolds (feature authorization checks can return 401/403 before
-501). See [the discovery contract](DISCOVERY-API.md) for its response, pagination,
-configuration requirements, and remaining frontend integration work.
+Health, authenticated public profiles, catalog/user-skills, discovery, swipes,
+matches, messages, and session scheduling are implemented. Live video rooms remain
+a demo feature. See [the discovery contract](DISCOVERY-API.md) for onboarding and
+recommendations.
 
 | Method | URL | Intended behavior |
 |---|---|---|
@@ -53,10 +59,14 @@ configuration requirements, and remaining frontend integration work.
 | POST | /api/user-skills | Implemented: add own catalog skill/direction idempotently |
 | DELETE | /api/user-skills | Implemented: remove own skill/direction association |
 | GET | /api/discover | Implemented: return a bounded page of reciprocal skill candidates |
-| POST | /api/swipes | Atomically record decision and possibly create match |
-| GET | /api/matches | List own matches |
-| GET | /api/matches/[matchId]/messages | Read a bounded page of messages |
-| POST | /api/matches/[matchId]/messages | Send message as current user |
+| POST | /api/swipes | Implemented: persist the first decision and possibly create one reciprocal match atomically; database limits 60 decisions per minute |
+| GET | /api/matches | Implemented: list matches for the current user with partner profiles |
+| GET | /api/matches/[matchId]/messages | Implemented: read a bounded, cursor-paginated page after membership check |
+| POST | /api/matches/[matchId]/messages | Implemented: send as current user after membership and Origin checks; database limits 20 messages per minute |
+| GET | /api/sessions | Implemented: list sessions belonging to the current user's matches |
+| POST | /api/sessions | Implemented: propose, accept, reschedule, cancel, or complete a session through an authorized RPC; database limits 10 actions per day |
+| POST | /api/blocks | Implemented: block or unblock a profile, hiding the pair from member features |
+| POST | /api/reports | Implemented: submit a categorized report; database limits 5 per day |
 
 Example planned POST /api/swipes request:
 

@@ -75,11 +75,15 @@ export function discoveryModel(client: SupabaseClient): DiscoverySource {
       return rows.map(({ skills, ...row }) => ({ ...row, skill: skills }));
     },
     async swipedTargets(actorId, targetIds) {
-      if (!targetIds.length) return new Set();
+      const { data: hidden, error: hiddenError } = await client.rpc("get_hidden_user_ids");
+      if (hiddenError || !Array.isArray(hidden)) throw unavailable();
+      const excluded = new Set(hidden.map((row: { user_id: string }) => row.user_id));
+      if (!targetIds.length) return excluded;
       const rows = await readPages((offset) => client.from("swipes").select("target_id", { count: "exact" })
         .eq("actor_id", actorId).in("target_id", targetIds).order("target_id")
         .range(offset, offset + BATCH_SIZE - 1), swipeSchema);
-      return new Set(rows.map((row) => row.target_id));
+      rows.forEach((row) => excluded.add(row.target_id));
+      return excluded;
     },
   };
 }

@@ -1,6 +1,12 @@
 import type { DiscoveryCandidate } from "@shared/discovery";
 import { Badge } from "@/components/demo/ui";
-export function SkillCard({ profile }: { profile: DiscoveryCandidate }) {
+import { SafetyActions } from "@/components/safety/safety-actions";
+export function SkillCard({ profile, busy = false, onDecision, onBlock }: {
+  profile: DiscoveryCandidate;
+  busy?: boolean;
+  onDecision?: (decision: "like" | "pass") => void;
+  onBlock?: (profileId: string) => void;
+}) {
   return <article className="partner-card card">
     <div className="partner-body">
       <div className="avatar" aria-hidden="true">{profile.display_name[0]}</div>
@@ -14,6 +20,11 @@ export function SkillCard({ profile }: { profile: DiscoveryCandidate }) {
         <p>Teaching similarity: {profile.semantic.teaching.similarity.toFixed(2)}. {profile.semantic.teaching.explanation}</p>
         <p>Reciprocal score: {profile.semantic.score.toFixed(2)} (minimum directional cosine similarity; not a probability).</p>
       </div>}
+      {onDecision && <div className="decision-buttons">
+        <button type="button" onClick={() => onDecision("pass")} disabled={busy}><span aria-hidden="true">×</span> Pass</button>
+        <button type="button" onClick={() => onDecision("like")} disabled={busy}><span aria-hidden="true">♥</span> Interested</button>
+      </div>}
+      <SafetyActions targetId={profile.id} onBlocked={() => onBlock?.(profile.id)} />
     </div>
   </article>;
 }
