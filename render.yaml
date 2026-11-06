@@ -2,7 +2,7 @@
 # Configure these values in Render, never in this file or in GitHub.
 services:
   - type: web
-    name: skillswap
+    name: skillswap-starter
     runtime: node
     plan: free
     branch: main
