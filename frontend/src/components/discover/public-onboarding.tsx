@@ -9,6 +9,7 @@ export function PublicOnboarding() {
   const [selections, setSelections] = useState<PublicSelection[]>([]);
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
+  const [preference, setPreference] = useState<"online" | "in_person" | "either" | "">("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [ready, setReady] = useState(false);
@@ -22,6 +23,7 @@ export function PublicOnboarding() {
       if (controller.signal.aborted) return;
       setCatalog(value.catalog); setSelections(value.selections);
       setName(value.profile?.display_name || ""); setBio(value.profile?.bio || "");
+      setPreference(value.profile?.meeting_preference || "");
       setReady(true); setError(""); setAuthPath(null);
     }).catch(reason => {
       if (controller.signal.aborted) return;
@@ -39,7 +41,7 @@ export function PublicOnboarding() {
       setError("Choose at least one skill to teach and one to learn."); return;
     }
     setSaving(true);
-    try { await savePublicOnboarding({ display_name: name.trim(), bio: bio.trim() }, selections); setSaved(true); }
+    try { await savePublicOnboarding({ display_name: name.trim(), bio: bio.trim(), meeting_preference: preference || null }, selections); setSaved(true); }
     catch (reason) {
       const message = reason instanceof Error ? reason.message : "The save could not be completed.";
       setError(`${message} Some changes may already be saved. Retry to finish, or reload to review saved choices.`);
@@ -63,13 +65,16 @@ export function PublicOnboarding() {
         <fieldset disabled={!ready || saving}>
           <label>Public display name<input required minLength={2} maxLength={80} value={name} onChange={event => { setName(event.target.value); setSaved(false); }} /></label>
           <label>Public bio (optional)<textarea rows={3} maxLength={500} value={bio} onChange={event => { setBio(event.target.value); setSaved(false); }} /></label>
+          <label>How would you like to meet? (optional)<select value={preference} onChange={event => { setPreference(event.target.value as typeof preference); setSaved(false); }}><option value="">No preference selected</option><option value="online">Online</option><option value="in_person">In person</option><option value="either">Either</option></select></label>
           {(["teach", "learn"] as const).map(direction => <fieldset key={direction}>
             <legend>{direction === "teach" ? "Skills you can teach" : "Skills you want to learn"}</legend>
             <div className="editable-skills">{selections.filter(row => row.direction === direction).map(row => <span className={`badge ${direction === "teach" ? "blue" : "mint"}`} key={row.skill_id}>
               {catalog.find(skill => skill.id === row.skill_id)?.name || "Unavailable catalog skill"}
+              <label className="skill-level">Current level<select aria-label={`${catalog.find(skill => skill.id === row.skill_id)?.name || "Skill"} ${direction} current level`} value={row.level} onChange={event => { const level = event.target.value as PublicSelection["level"]; setSelections(value => value.map(item => item.skill_id === row.skill_id && item.direction === direction ? { ...item, level } : item)); setSaved(false); }}><option value="beginner">Beginner</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option></select></label>
+              {direction === "learn" && <label className="skill-level">Goal (optional)<select aria-label={`${catalog.find(skill => skill.id === row.skill_id)?.name || "Skill"} learning goal level`} value={row.goal_level || ""} onChange={event => { const goal_level = (event.target.value || null) as PublicSelection["goal_level"]; setSelections(value => value.map(item => item.skill_id === row.skill_id && item.direction === direction ? { ...item, goal_level } : item)); setSaved(false); }}><option value="">Not sure yet</option><option value="beginner">Beginner</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option></select></label>}
               <button type="button" aria-label={`Remove ${catalog.find(skill => skill.id === row.skill_id)?.name || "skill"} from ${direction}`} onClick={() => { setSelections(value => value.filter(item => item !== row)); setSaved(false); }}>×</button>
             </span>)}</div>
-            <select aria-label={`Add a skill to ${direction}`} value="" onChange={event => { const skill_id = event.target.value; if (skill_id) { setSelections(value => [...value, { skill_id, direction }]); setSaved(false); } }}>
+            <select aria-label={`Add a skill to ${direction}`} value="" onChange={event => { const skill_id = event.target.value; if (skill_id) { setSelections(value => [...value, { skill_id, direction, level: "beginner", goal_level: null }]); setSaved(false); } }}>
               <option value="">+ Add a skill</option>
               {catalog.filter(skill => !selections.some(row => row.skill_id === skill.id && row.direction === direction)).map(skill => <option value={skill.id} key={skill.id}>{skill.name}</option>)}
             </select>

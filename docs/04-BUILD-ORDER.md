@@ -76,7 +76,8 @@ shared/types/database.ts. Add that type to the client factories for typed databa
 8. Acquire a transaction-level advisory lock (or another correct locking strategy)
    BEFORE reading/writing the pair so simultaneous likes do not miss each other.
 9. Store the swipe once, check reverse interest, and insert one canonical match with
-   conflict handling. Decide explicitly how repeat requests and changed decisions work.
+   conflict handling. Like retries are idempotent; an explicit revisit may upgrade
+   a pass to a like, but a like cannot be silently undone.
 10. If the function uses SECURITY DEFINER, set a safe search_path, qualify references,
     revoke execution from PUBLIC and anon, and grant only authenticated execution.
     It must perform its own auth checks because elevated execution can bypass RLS.
@@ -85,8 +86,9 @@ shared/types/database.ts. Add that type to the client factories for typed databa
 13. Enable the card buttons and display the API result. A lone like is not a match.
 14. Test A likes B, B likes A, repeated clicks, simultaneous likes, pass, and self-like.
 
-The function and API are implemented in the local migration and backend route.
-They remain unavailable on a Supabase project until that migration is applied.
+The function and API are implemented in versioned migrations and backend routes.
+The new discovery/ranking migration remains unavailable on a Supabase project until
+it is applied there. Live onboarding and two-account verification are still required.
 
 ## Milestone 5 — Messaging (API and UI implemented)
 

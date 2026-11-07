@@ -38,7 +38,8 @@ relationships. Skill level is self-reported, not a verified qualification.
 
 ## Planned endpoints
 
-Health, authenticated public profiles, catalog/user-skills, discovery, swipes,
+Health, authenticated public profiles, catalog/user-skills, ranked discovery,
+pending interests and swipes,
 matches, messages, and session scheduling are implemented. Live video rooms remain
 a demo feature. See [the discovery contract](DISCOVERY-API.md) for onboarding and
 recommendations.
@@ -58,8 +59,9 @@ recommendations.
 | GET | /api/user-skills | Implemented: return own teaching/learning skills |
 | POST | /api/user-skills | Implemented: add own catalog skill/direction idempotently |
 | DELETE | /api/user-skills | Implemented: remove own skill/direction association |
-| GET | /api/discover | Implemented: return a bounded page of reciprocal skill candidates |
-| POST | /api/swipes | Implemented: persist the first decision and possibly create one reciprocal match atomically; database limits 60 decisions per minute |
+| GET | /api/discover | Implemented: rank reciprocal and relevant one-way catalog-skill candidates before pagination; supports skill and meeting-mode filters |
+| GET | /api/swipes | Implemented: list pending outgoing interests for the signed-in user |
+| POST | /api/swipes | Implemented: persist interest/pass, upgrade an intentionally revisited pass, and possibly create one reciprocal match atomically; database limits 60 decisions per minute |
 | GET | /api/matches | Implemented: list matches for the current user with partner profiles |
 | GET | /api/matches/[matchId]/messages | Implemented: read a bounded, cursor-paginated page after membership check |
 | POST | /api/matches/[matchId]/messages | Implemented: send as current user after membership and Origin checks; database limits 20 messages per minute |

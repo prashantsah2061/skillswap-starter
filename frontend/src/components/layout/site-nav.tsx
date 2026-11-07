@@ -15,20 +15,20 @@ export function SiteNav() {
         <Logo />
         <nav aria-label="Main navigation">
           {[
-            ["Explore", "/explore"],
+            ["Discover", "/discover"],
             ["Matches", "/matches"],
             ["Messages", "/messages"],
-            ["Sessions", "/sessions"],
+            ["Profile", "/onboarding"],
           ].map(([name, href]) => (
             <Link
               key={href}
               href={href}
               className={
-                path.startsWith(href) ||
-                (href === "/matches" && path === "/discover")
+                path.startsWith(href)
                   ? "active"
                   : ""
               }
+              aria-current={path.startsWith(href) ? "page" : undefined}
             >
               {name}
             </Link>
@@ -41,7 +41,7 @@ export function SiteNav() {
             <span aria-hidden="true">⌄</span>
           </summary>
           <div>
-            <Link href="/profile">Your profile</Link>
+            <Link href="/profile">Account details</Link>
             <Link href="/settings/blocked">Blocked members</Link>
             <Link href="/security">Account security</Link>
             <LogoutButton />

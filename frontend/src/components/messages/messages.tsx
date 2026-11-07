@@ -1,12 +1,15 @@
 "use client";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { loadMatches, loadMessages, sendMessage, type MatchSummary, type PersistedMessage } from "@/lib/discovery/client";
 import { SafetyActions } from "@/components/safety/safety-actions";
 
 export function Messages({ selectedId }: { selectedId?: string }) {
+  const router = useRouter();
   const [matches, setMatches] = useState<MatchSummary[]>([]);
   const [messages, setMessages] = useState<PersistedMessage[]>([]);
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [cursor, setCursor] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(true);
@@ -14,6 +17,7 @@ export function Messages({ selectedId }: { selectedId?: string }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const active = useMemo(() => selectedId ? matches.find(match => match.id === selectedId) : matches[0], [matches, selectedId]);
+  const loadingConversation = Boolean(active && loadedFor !== active.id && !error);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -24,15 +28,14 @@ export function Messages({ selectedId }: { selectedId?: string }) {
   }, []);
 
   useEffect(() => {
-    if (!active) { setMessages([]); setCursor(null); return; }
+    if (!active) return;
     const controller = new AbortController();
-    setLoading(true); setError(""); setMessages([]); setCursor(null);
     loadMessages(active.id, null, controller.signal).then(result => {
-      setMessages(result.data); setCursor(result.meta.next_cursor);
+      setMessages(result.data); setCursor(result.meta.next_cursor); setLoadedFor(active.id); setError("");
     }).catch(reason => setError(reason instanceof Error ? reason.message : "Messages could not be loaded."))
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [active?.id]);
+  }, [active]);
 
   async function refresh() {
     if (!active) return;
@@ -75,21 +78,21 @@ export function Messages({ selectedId }: { selectedId?: string }) {
         {matches.map(match => <Link href={`/messages/${match.id}`} className={`conversation ${match.id === active?.id ? "selected" : ""}`} key={match.id}>
           <span className="avatar" aria-hidden="true">{match.partner.display_name[0]}</span><div><strong>{match.partner.display_name}</strong><p>Open your conversation</p></div><span>›</span>
         </Link>)}
-        {!loading && !matches.length && <p className="muted">You’ll be able to message people after you match.</p>}
+        {!loading && !matches.length && <p className="muted">Your conversations will appear here.</p>}
       </aside>
       <section className="message-panel">
         {active ? <>
           <div className="message-header"><span className="avatar" aria-hidden="true">{active.partner.display_name[0]}</span><div><h2>{active.partner.display_name}</h2><small className="muted">Matched {new Date(active.created_at).toLocaleDateString()}</small></div><Link className="button secondary" href="/sessions">Schedule a session</Link><button className="button secondary" type="button" onClick={() => void refresh()}>Refresh</button></div>
-          <SafetyActions targetId={active.partner.id} matchId={active.id} onBlocked={() => window.location.assign("/matches")} />
+          <SafetyActions targetId={active.partner.id} matchId={active.id} onBlocked={() => router.push("/matches")} />
           <div className="message-history">
-            {cursor && <button className="text-button" type="button" onClick={() => void loadOlder()}>Load earlier messages</button>}
-            {loading && <p className="muted" role="status">Loading conversation…</p>}
-            {!loading && !messages.length && <p className="empty">Start with a hello and a skill you’d like to learn.</p>}
-            {messages.map(message => <div key={message.id} className={`message ${message.mine ? "mine" : ""}`}><p>{message.body}</p><small>{new Date(message.created_at).toLocaleString()}</small></div>)}
+            {loadedFor === active.id && cursor && <button className="text-button" type="button" onClick={() => void loadOlder()}>Load earlier messages</button>}
+            {(loading || loadingConversation) && <p className="muted" role="status">Loading conversation…</p>}
+            {!loading && loadedFor === active.id && !messages.length && <p className="empty">Start with a hello and a skill you’d like to learn.</p>}
+            {loadedFor === active.id && messages.map(message => <div key={message.id} className={`message ${message.mine ? "mine" : ""}`}><p>{message.body}</p><small>{new Date(message.created_at).toLocaleString()}</small></div>)}
           </div>
           <form className="message-compose" onSubmit={submit}><input aria-label="Message" placeholder="Write a message…" maxLength={2000} value={draft} onChange={event => setDraft(event.target.value)} /><button className="button" disabled={!draft.trim() || sending}>{sending ? "Sending…" : <>Send <span aria-hidden="true">↑</span></>}</button></form>
           {error && <p className="error-feedback" role="alert">{error}</p>}{notice && <p className="chat-note" role="status">{notice}</p>}
-        </> : <div className="empty">{error && <p className="error-feedback" role="alert">{error}</p>}<h2>{loading ? "Loading conversations…" : selectedId ? "Conversation unavailable" : "Your next conversation starts here"}</h2><Link className="button" href="/discover">Find a partner</Link></div>}
+        </> : <div className="empty">{error && <p className="error-feedback" role="alert">{error}</p>}<h2>{loading ? "Loading conversations…" : selectedId ? "Conversation unavailable" : "Your conversations will appear here."}</h2><Link className="button" href="/discover">Find a partner</Link></div>}
       </section>
     </div>
   </>;

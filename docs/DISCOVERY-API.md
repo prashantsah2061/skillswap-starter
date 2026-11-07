@@ -1,14 +1,11 @@
 # Public onboarding and authenticated discovery
 
-`/onboarding` explicitly saves a chosen public profile and canonical teach/learn
-selections. `/discover` now uses persisted reciprocal listings, without a demo
-fallback. Both reuse existing cards, forms, badges, and navigation. The private
-account-profile screen links to public onboarding instead of editing browser-only
-skills. Swipe decisions, mutual matches, messages, and session scheduling are
-persisted by authenticated backend APIs. Live session rooms remain sample
-content. The optional,
-disabled-by-default [semantic matcher](SEMANTIC-MATCHING.md) adds evaluated
-related-skill scoring and snapshot ranking; this page describes the exact baseline.
+`/onboarding` explicitly saves a public profile, skill catalog selections, self-
+reported skill levels, optional target levels, and optional meeting preference.
+`/discover` uses persisted data and ranks reciprocal exact skill swaps above
+one-way recommendations. The API route uses the explainable catalog-ID matcher.
+The separate experimental semantic matcher is not called by discovery. Availability
+is not represented by the current schema and is not inferred.
 
 ## API contract
 
@@ -22,33 +19,34 @@ Bearer authentication is not implemented. No caller-supplied owner ID is accepte
 | `/api/public-profile` | `/api/profiles/me` | GET own public profile/null; PATCH create/update explicit public fields; POST publish after saving skills |
 | `/api/skills` | `/api/skills` | GET full visible canonical catalog |
 | `/api/user-skills` | `/api/user-skills` | GET own listings; POST add; DELETE remove |
-| `/api/discover` | `/api/discover` | GET reciprocal recommendations |
+| `/api/discover` | `/api/discover` | GET reciprocal and one-way recommendations |
+| `/api/swipes` | `/api/swipes` | GET pending outgoing interests; POST like/pass |
 
-Public-profile PATCH accepts only `display_name` and `bio`. The name is trimmed
+Public-profile PATCH accepts only `display_name`, `bio`, and nullable
+`meeting_preference` (`online`, `in_person`, or `either`). The name is trimmed
 and must have 2–80 Unicode characters; bio is trimmed and at most 500. The server
-inserts a missing own profile or updates only its display_name/bio columns, never
-its immutable ID. No city, private account data, or Auth metadata is copied.
+inserts a missing own profile or updates only granted public columns, never its
+immutable ID. No city, private account data, avatar, or Auth metadata is copied.
 The onboarding flow publishes the profile only after at least one teach skill and
 one learn skill have been saved. Publication is enforced by the authenticated
 `publish_my_public_profile` database function.
 
-User-skills POST/DELETE accept only `skill_id` (canonical lowercase UUID) and
-`direction` (`teach` or `learn`). POST requires an own public profile and a visible
-catalog skill. New rows use the schema's beginner level. INSERT ON CONFLICT DO
-NOTHING preserves existing levels and avoids unauthorized composite-key updates.
-DELETE filters by authenticated actor, skill, and direction. Both are idempotent.
-Catalog creation and level editing are outside this UI. Mutation bodies are
-streamed with an 8 KiB limit at both layers, with Origin checks at both layers.
+User-skills POST accepts canonical `skill_id`, `direction`, current `level`, and
+nullable `goal_level`; DELETE accepts the skill and direction. Level values are
+self-reported, not verified qualifications. `goal_level` applies to a learned
+skill and remains unknown when omitted. Writes are restricted to the authenticated
+owner and catalog. Mutation bodies are streamed with an 8 KiB limit at both
+layers, with Origin checks at both layers.
 
-Success is `{ "data": ... }`: a profile (`id,display_name,bio`), catalog array
-(`id,name`), own listing array (`skill_id,direction,level`), or changed selection
-(`skill_id,direction`). All responses, including errors, are private/no-store.
+Success is `{ "data": ... }`: a profile, catalog array (`id,name`), own listing
+array (`skill_id,direction,level,goal_level`), pending interests, or changed
+selection. All responses, including errors, are private/no-store.
 
 Discovery accepts optional `limit` (default 20, integer 1–50 without leading
-zeroes) and opaque `cursor`. Unknown/duplicate parameters and malformed,
-unsupported-version, or another user's cursors return 400. The actor and skills
-come from the session and persisted listings, never demo names or request arrays.
-The former category-name URL hint is not a discovery filter.
+zeroes), opaque `cursor`, `skill` (catalog UUID the user wants to learn), `mode`
+(`online` or `in_person`), and `include_skipped=true`. Unknown/duplicate
+parameters, changed filters during pagination, and another user's cursors return
+400. The actor and skills come from the session and persisted listings.
 
 Shared types: `shared/types/discovery.ts`.
 
@@ -57,6 +55,8 @@ type Skill = { id: string; name: string };
 type DiscoverResponse = {
   data: Array<{
     id: string; display_name: string; bio: string;
+    recommendation_type: "reciprocal" | "one_way";
+    recommendation_reason: string;
     teaches: Skill[]; learns: Skill[];
     compatibility: { you_can_learn: Skill[]; you_can_teach: Skill[] };
   }>;
@@ -67,13 +67,20 @@ type DiscoverResponse = {
 };
 ```
 
-Both intersections must be nonempty: caller learns ∩ candidate teaches, and caller
-teaches ∩ candidate learns. Matching uses catalog IDs, not names or levels.
-Exclude self and targets of all prior outgoing swipes (like and pass). Return only
-public profile fields. Missing public profile/either skill direction returns 200,
-empty data, and the matching onboarding reason. An onboarded user with no eligible
-partners receives empty data and reason null. The screen renders loading, setup,
-empty, retry, pagination, and login/MFA recovery states explicitly.
+Reciprocal recommendations require both intersections: caller learns ∩ candidate
+teaches, and caller teaches ∩ candidate learns. If there are too few, one-way
+recommendations use only the exact supported intersection and are labeled
+separately. Skill identity comes from stable catalog UUIDs; labels are never
+case-normalized to guess equivalence. Filtered candidates must match the chosen
+skill and meeting mode; `either` matches either mode, while missing mode remains
+unknown and is excluded by an explicit mode filter.
+
+Exclude self, blocked users in either direction, hidden/unpublished/incomplete or
+suspended profiles, prior interests, and confirmed matches. Passes leave the
+normal queue and may be revisited using the explicit revisit action. A revisited
+pass can be upgraded to a like; repeat likes are idempotent. Pending interests are
+shown separately until mutual interest creates a match. Missing public profile or
+either skill direction returns 200 with the relevant onboarding reason.
 
 Errors use `{ "error": { "code": "...", "message": "..." } }`:
 
@@ -94,19 +101,23 @@ Missing schema is never presented as missing onboarding.
 
 ## Pagination and matching boundaries
 
-Candidates sort by profile UUID; skill arrays sort by skill UUID. The service
-scans profile keyset batches until it finds limit+1 eligible candidates or an
-empty profile query. It continues after short server-capped batches and batches
-with no matches. The cursor points after the last returned candidate, not the
-last scanned profile, so lookahead candidates are not consumed. Related skills
-and swipe reads use ordered ranges and exact counts to avoid silent row-cap
-truncation. A failure during lookahead returns an error, not a false end marker.
+The service scans eligible profile keyset batches, applies exclusions and filters,
+then sorts before pagination. Ranking order is: reciprocal over one-way, greater
+number of exact reciprocal skill overlaps, compatible preference over unknown
+over a known conflict, then more teaching proficiencies that meet a stated learner
+target level, then stable profile UUID. Unknown preference/goal levels are not
+mismatches and do not earn a level-fit point. Availability is not stored, so it
+contributes no score.
+The cursor stores the last card's ranking tuple and filters and is bound to the
+authenticated actor, so removing already-shown cards after a swipe does not shift
+the next-page boundary. Restart discovery after changing skills or filters.
+Candidate ranking is
+bounded to the first 5,000 visible profiles; catalog UUIDs are stable skill keys.
 
-Cursors are versioned, actor-bound base64url JSON with validated UUID boundaries.
-They are not signed authorization capabilities: altered boundaries cannot bypass
-RLS. Requests are not snapshots; concurrent edits can change eligibility. Restart
-pagination after skill/swipe edits. Sparse matches can require many reads.
-Indexed ranking queries and ranking-aware cursor versions are later work.
+Cursors are versioned, actor-bound base64url JSON. They are not signed
+authorization capabilities: altered offsets cannot bypass RLS. Requests are not
+snapshots; concurrent edits can change ordering. Restart pagination after skill,
+swipe, or profile edits. Sparse matches can require many reads.
 
 Pure matching/explanation logic is separate from HTTP, data access, and service
 orchestration in `backend/src/lib/discovery/matching.ts`. Semantic matching can be
@@ -114,19 +125,22 @@ added independently; changing ordering requires a new cursor version and tests.
 
 ## Schema, RLS, and public/private separation
 
-No migration is required by this implementation. Inspection and isolated
-PostgreSQL tests cover the original schema and existing grants:
+The additive migration 20261107000100_discovery_ranking_and_visibility.sql adds
+nullable meeting preference, suspension state, and learner target level, removes
+an old broad active_session policy if present, and narrows profile, skill, match,
+and message reads to authorized visible data. It preserves existing rows and RLS:
 
 - Authenticated SELECT grants and USING(true) policies allow public profiles,
   catalog, and listing reads. Anonymous users have no table grants.
-- Profile insert/update policies require auth.uid()=id; UPDATE grants cover
-  display_name/bio, not id. Skill insert/delete policies require own user_id;
-  UPDATE covers only level. The APIs use precisely these permitted operations.
+- Profile insert/update policies require auth.uid()=id; UPDATE grants cover public
+  fields, not id. Skill insert/delete policies require own user_id; updates cover
+  self-reported skill/goal levels. The APIs use precisely these permitted operations.
 - Swipe reads are actor-only and explicitly actor-filtered. Direct swipe/match
   writes remain blocked; the additive matching migration grants authenticated
   users only the `record_swipe` RPC. It derives the actor from `auth.uid()`, makes
-  the first decision immutable, serializes both directions on the canonical pair,
-  and inserts one match after mutual likes.
+  pass-to-like revisits, serializes both directions on the canonical pair, and
+  inserts one match after mutual likes. Pair uniqueness and conflict handling make
+  retries safe.
 - Match reads are member-only. Message reads/inserts are restricted to match
   members; the API checks membership before paginated reads or sends.
 - Blocked users are excluded in both directions from public profile/listing reads,
@@ -135,8 +149,8 @@ PostgreSQL tests cover the original schema and existing grants:
 - Database-backed quotas limit swipes to 60/minute, messages to 20/minute,
   session state changes to 10/day, and reports to 5/day. Supabase Auth provider
   rate limits and CAPTCHA settings still require dashboard configuration.
-- No hidden/blocked flags exist. Future RLS restrictions remain authoritative;
-  no service-role client is used to bypass them.
+- Hidden/suspended/unpublished profiles are excluded from discovery. No
+  service-role client is used to bypass RLS.
 
 Private account_profiles uses user_id, includes city, and accepts 1–80 character
 names. Public profiles uses id, excludes city, and requires 2–80 character names.

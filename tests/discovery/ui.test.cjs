@@ -53,13 +53,15 @@ test('discovery screen renders loading, onboarding, true empty, provider errors 
   for (const [result, error, expected] of [
     [empty('PROFILE_REQUIRED'), null, 'Introduce yourself to the community'],
     [empty('SKILLS_REQUIRED'), null, 'Choose your skill exchange'],
-    [empty(null), null, 'No reciprocal partners yet'],
+    [empty(null), null, 'No partners in this queue yet.'],
     [null, new PublicApiError(503, 'DISCOVERY_UNAVAILABLE', 'Service unavailable'), 'Service unavailable'],
     [null, new PublicApiError(401, 'UNAUTHORIZED', 'Sign in to continue.'), 'Sign in again'],
     [null, new PublicApiError(403, 'MFA_REQUIRED', 'Complete verification.'), 'Verify your second factor'],
   ]) {
     const view = screen('frontend/src/components/discover/discovery.tsx', 'Discovery', { PublicApiError,
       loadDiscovery: async () => { if (error) throw error; return result; },
+      loadPublicOnboarding: async () => ({ catalog: [], selections: [] }),
+      loadPendingInterests: async () => ({ data: [] }),
     });
     assert.match(view.render(), /Finding skill partners/);
     const html = await view.settle();
@@ -70,7 +72,9 @@ test('discovery screen renders loading, onboarding, true empty, provider errors 
 });
 
 test('discovery screen retries and appends real pages, preserving loaded results on a load-more failure', async () => {
-  const candidate = n => ({ id: id(n), display_name: 'Real member ' + n, bio: 'Saved public bio', teaches: [], learns: [], compatibility: { you_can_learn: [], you_can_teach: [] } });
+  const candidate = n => ({ id: id(n), display_name: 'Real member ' + n, bio: 'Saved public bio', meeting_preference: null,
+    recommendation_type: 'reciprocal', recommendation_reason: 'Can exchange Python and Guitar.', preference_compatible: true, reciprocal_skill_count: 2,
+    teaches: [], learns: [], compatibility: { you_can_learn: [], you_can_teach: [] } });
   let fail = true;
   const cursors = [];
   const view = screen('frontend/src/components/discover/discovery.tsx', 'Discovery', { PublicApiError,
@@ -79,6 +83,8 @@ test('discovery screen retries and appends real pages, preserving loaded results
       if (cursor && fail) throw new PublicApiError(503, 'DISCOVERY_UNAVAILABLE', 'Temporary failure');
       return { data: [candidate(cursor ? 3 : 2)], meta: { next_cursor: cursor ? null : 'opaque-next', reason: null } };
     },
+    loadPublicOnboarding: async () => ({ catalog: [], selections: [] }),
+    loadPendingInterests: async () => ({ data: [] }),
   });
   view.render(); assert.match(await view.settle(), /Real member 2/);
   const button = label => view.find(node => node.type === 'button' && node.props.children === label);
@@ -115,7 +121,7 @@ test('public onboarding starts blank, saves only explicit canonical selections a
   fail = false;
   await view.find(node => node.type === 'form').props.onSubmit({ preventDefault() {} });
   assert.match(view.render(), /Public profile and skills saved/);
-  assert.deepEqual(JSON.parse(JSON.stringify(saved[1])), { profile: { display_name: 'Explicit public name', bio: '' }, selections: [
-    { skill_id: id(101), direction: 'teach' }, { skill_id: id(102), direction: 'learn' },
+  assert.deepEqual(JSON.parse(JSON.stringify(saved[1])), { profile: { display_name: 'Explicit public name', bio: '', meeting_preference: null }, selections: [
+    { skill_id: id(101), direction: 'teach', level: 'beginner', goal_level: null }, { skill_id: id(102), direction: 'learn', level: 'beginner', goal_level: null },
   ] });
 });

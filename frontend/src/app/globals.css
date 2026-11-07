@@ -2497,3 +2497,42 @@ input:focus, textarea:focus, select:focus { outline: 2px solid #4f6f5d55; border
 .signup-success p { margin-bottom: 0; }
 @keyframes auth-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .auth-spinner { animation: none; } }
+
+.discovery-filters { display: flex; flex-wrap: wrap; align-items: end; justify-content: flex-start; gap: 14px; margin-bottom: 18px; }
+.discovery-filters label { display: grid; gap: 5px; color: var(--muted); font-size: 12px; }
+.discovery-filters select { max-width: 220px; min-width: 150px; }
+.recommendation-heading { font-size: 22px; margin: 24px 0 12px; }
+.partner-card { margin-bottom: 16px; padding: 0; }
+.partner-body { padding: 22px; }
+.partner-body > .avatar { float: left; margin-right: 13px; }
+.partner-bio { clear: both; padding-top: 12px; }
+.partner-skills { clear: both; }
+.partner-context { display: flex; flex-wrap: wrap; gap: 8px; margin: 13px 0 5px; color: var(--muted); font-size: 13px; }
+.recommendation-reason { margin: 10px 0; color: var(--accent-blue); font-size: 14px; font-weight: 600; }
+.profile-details { margin-top: 12px; font-size: 14px; }
+.profile-details summary { width: fit-content; color: var(--primary); cursor: pointer; font-weight: 600; }
+.profile-details > div { margin-top: 12px; padding: 14px; border-radius: 10px; background: var(--surface-raised); }
+.profile-details p:last-child { margin-bottom: 0; }
+.decision-buttons { justify-content: flex-start; gap: 10px; }
+.decision-buttons > button { flex-direction: row; border: 1px solid var(--border); border-radius: 10px; padding: 10px 18px; background: var(--surface); min-height: 44px; }
+.decision-buttons > button:last-child { background: var(--primary); color: #fff; border-color: var(--primary); }
+.decision-buttons > button:hover { box-shadow: var(--panel-shadow); }
+.pending-interests { margin-bottom: 18px; }
+.pending-interests ul { list-style: none; padding: 0; margin: 0; }
+.pending-interests li { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 0; border-top: 1px solid var(--border); }
+.skill-level { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; }
+.skill-level select { font-size: 12px; padding: 4px; }
+.editable-skills .badge { display: inline-flex; align-items: center; gap: 7px; }
+.nav-inner nav a:focus-visible { box-shadow: inset 0 0 0 2px var(--primary); }
+@media (max-width: 650px) {
+  .discovery-filters { display: grid; grid-template-columns: 1fr; }
+  .discovery-filters label, .discovery-filters select { width: 100%; max-width: none; }
+  .partner-skills { grid-template-columns: 1fr; }
+  .partner-skills > div + div { border-left: 0; border-top: 1px solid var(--border); padding: 12px 0 0; }
+  .decision-buttons { gap: 8px; }
+  .decision-buttons > button { flex: 1; justify-content: center; }
+  .nav-inner nav a { padding-inline: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .partner-card, .button { transition: none; }
+}

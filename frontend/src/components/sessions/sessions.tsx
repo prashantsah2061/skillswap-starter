@@ -31,10 +31,14 @@ export function Sessions({ selectedId }: { selectedId?: string }) {
 
   useEffect(() => {
     let active = true;
-    refresh().catch(reason => { if (active) setError(reason instanceof Error ? reason.message : "Sessions could not be loaded."); })
+    Promise.all([loadMatches(), loadSessions()]).then(([matchResult, sessionResult]) => {
+      if (!active) return;
+      setMatches(matchResult.data); setSessions(sessionResult.data);
+      setMatchId(current => current || matchResult.data[0]?.id || "");
+    }).catch(reason => { if (active) setError(reason instanceof Error ? reason.message : "Sessions could not be loaded."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [refresh]);
+  }, []);
 
   async function submitProposal(event: FormEvent) {
     event.preventDefault();
@@ -60,7 +64,7 @@ export function Sessions({ selectedId }: { selectedId?: string }) {
     return <div className="session-actions">
       {(status === "proposed" || status === "reschedule_requested") && session.can_accept && <button className="button" disabled={saving} onClick={() => void act({ action: "accept", session_id: session.id }, status === "proposed" ? "Session confirmed." : "New time confirmed.")}>{status === "proposed" ? "Accept proposal" : "Accept new time"}</button>}
       {status === "confirmed" && <button className="button secondary" disabled={saving} onClick={() => { setRescheduling(session.id); setRescheduleDate(localDateTime(session.scheduled_at)); }}>Propose a new time</button>}
-      {status === "confirmed" && new Date(session.scheduled_at).getTime() <= Date.now() && <button className="button" disabled={saving} onClick={() => void act({ action: "complete", session_id: session.id }, "Session marked complete.")}>Mark complete</button>}
+      {status === "confirmed" && session.can_complete && <button className="button" disabled={saving} onClick={() => void act({ action: "complete", session_id: session.id }, "Session marked complete.")}>Mark complete</button>}
       {["proposed", "confirmed", "reschedule_requested"].includes(status) && <button className="text-button" disabled={saving} onClick={() => void act({ action: "cancel", session_id: session.id }, "Session cancelled.")}>Cancel session</button>}
       {rescheduling === session.id && <form className="session-reschedule" onSubmit={event => { event.preventDefault(); void act({ action: "reschedule", session_id: session.id, scheduled_at: new Date(rescheduleDate).toISOString() }, "New time proposed."); }}>
         <label>New proposed time<input type="datetime-local" required value={rescheduleDate} onChange={event => setRescheduleDate(event.target.value)} /></label>
