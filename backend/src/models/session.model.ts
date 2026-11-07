@@ -28,7 +28,10 @@ export function sessionModel(client: SupabaseClient) {
         const partnerId = match && (match.user_a === actorId ? match.user_b : match.user_a);
         const partner = partnerId ? profileById.get(partnerId) : undefined;
         if (!partner) throw unavailable();
-        return { ...row, partner, mine: row.created_by === actorId, can_accept: row.proposed_by !== actorId };
+        return {
+          ...row, partner, mine: row.created_by === actorId, can_accept: row.proposed_by !== actorId,
+          can_complete: row.status === "confirmed" && new Date(row.scheduled_at).getTime() <= Date.now(),
+        };
       });
     },
 

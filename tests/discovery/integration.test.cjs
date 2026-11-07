@@ -11,7 +11,7 @@ const normalize = value => JSON.parse(JSON.stringify(value));
 // Route Handler/auth/model/service. Only network and Supabase are fixtures.
 function fixture() {
   let actor = a, currentRequest, signedOut = false, failTable = null, failWrite = null;
-  const tables = { profiles: [], user_skills: [], swipes: [], skills: [{ id: python, name: 'Python' }, { id: guitar, name: 'Guitar' }] };
+  const tables = { profiles: [], user_skills: [], swipes: [], matches: [], skills: [{ id: python, name: 'Python' }, { id: guitar, name: 'Guitar' }] };
   const calls = [], forwarded = [];
   const client = { from(table) {
     assert.notEqual(table, 'account_profiles', 'private profiles must never be published implicitly');
@@ -20,8 +20,10 @@ function fixture() {
     const q = {
       select(value, options) { columns = value; counted = options?.count === 'exact'; return this; },
       eq(key, value) { filters.push(row => row[key] === value); return this; },
+      is(key, value) { filters.push(row => row[key] === value); return this; },
       gt(key, value) { filters.push(row => row[key] > value); return this; },
       in(key, value) { filters.push(row => value.includes(row[key])); return this; },
+      or() { return this; },
       order(key) { order.push(key); return this; },
       range(start, end) { offset = start; limit = end - start + 1; return this; },
       limit(size) { limit = size; return this; },
@@ -42,12 +44,17 @@ function fixture() {
             assert.equal(operation, 'upsert'); assert.equal(upsertOptions.ignoreDuplicates, true);
             affected = [];
           } else {
-            const row = { ...(table === 'user_skills' ? { level: 'beginner' } : {}), ...values };
+            const row = { ...(table === 'user_skills' ? { level: 'beginner', goal_level: null } : table === 'profiles' ? { meeting_preference: null, visible: false, onboarded: false, suspended_at: null } : {}), ...values };
             tables[table].push(row); affected = [row];
           }
         } else if (operation === 'update') {
-          assert.ok(affected.every(row => row.id === actor));
-          assert.deepEqual(Object.keys(values).sort(), ['bio', 'display_name']);
+          if (table === 'profiles') {
+            assert.ok(affected.every(row => row.id === actor));
+            assert.deepEqual(Object.keys(values).sort(), ['bio', 'display_name', 'meeting_preference']);
+          } else {
+            assert.ok(affected.every(row => row.user_id === actor));
+            assert.deepEqual(Object.keys(values).sort(), ['goal_level', 'level']);
+          }
           affected.forEach(row => Object.assign(row, values));
         } else if (operation === 'delete') {
           assert.ok(affected.every(row => row.user_id === actor));
@@ -63,6 +70,16 @@ function fixture() {
       }).then(resolve, reject); },
     };
     return q;
+  }, rpc: async name => {
+    if (name === 'get_hidden_user_ids' || name === 'get_hidden_user_ids_page') return { data: [], error: null };
+    if (name === 'publish_my_public_profile') {
+      const profile = tables.profiles.find(row => row.id === actor);
+      if (!profile || !tables.user_skills.some(row => row.user_id === actor && row.direction === 'teach') ||
+          !tables.user_skills.some(row => row.user_id === actor && row.direction === 'learn')) return { data: null, error: { code: '22023' } };
+      profile.visible = true; profile.onboarded = true;
+      return { data: true, error: null };
+    }
+    return { data: [], error: null };
   }, auth: {
     getUser: async () => ({ data: { user: signedOut || !currentRequest.headers.get('cookie')?.includes('sb-project-auth-token.0=fixture-0') ? null : { id: actor, email_confirmed_at: '2026-01-01', app_metadata: {} } }, error: null }),
     mfa: { getAuthenticatorAssuranceLevel: async () => ({ data: { currentLevel: 'aal1', nextLevel: 'aal1' }, error: null }) },
@@ -107,12 +124,12 @@ test('integration: explicit onboarding persists canonical skills and finds recip
   assert.equal(initial.profile, null); assert.deepEqual(normalize(initial.selections), []);
   assert.equal(initial.catalog.length, 2); // capped server still fully read
   assert.equal((await f.browser.loadDiscovery()).meta.reason, 'PROFILE_REQUIRED');
-  await f.browser.savePublicOnboarding({ display_name: 'Public A', bio: 'Explicit public introduction' }, [
-    { skill_id: python, direction: 'teach' }, { skill_id: guitar, direction: 'learn' },
+  await f.browser.savePublicOnboarding({ display_name: 'Public A', bio: 'Explicit public introduction', meeting_preference: null }, [
+    { skill_id: python, direction: 'teach', level: 'beginner' }, { skill_id: guitar, direction: 'learn', level: 'beginner' },
   ]);
   f.as(b);
-  await f.browser.savePublicOnboarding({ display_name: 'Public B', bio: 'Public exchange' }, [
-    { skill_id: guitar, direction: 'teach' }, { skill_id: python, direction: 'learn' },
+  await f.browser.savePublicOnboarding({ display_name: 'Public B', bio: 'Public exchange', meeting_preference: null }, [
+    { skill_id: guitar, direction: 'teach', level: 'beginner' }, { skill_id: python, direction: 'learn', level: 'beginner' },
   ]);
   f.as(a);
   const loaded = await f.browser.loadPublicOnboarding();
@@ -128,34 +145,34 @@ test('integration: explicit onboarding persists canonical skills and finds recip
 
 test('integration: public edits use UPDATE permitted columns, remove only own selections and preserve unchanged levels', async () => {
   const f = fixture();
-  const desired = [{ skill_id: python, direction: 'teach' }, { skill_id: guitar, direction: 'learn' }];
-  await f.browser.savePublicOnboarding({ display_name: 'Public A', bio: '' }, desired);
+  const desired = [{ skill_id: python, direction: 'teach', level: 'beginner' }, { skill_id: guitar, direction: 'learn', level: 'beginner' }];
+  await f.browser.savePublicOnboarding({ display_name: 'Public A', bio: '', meeting_preference: null }, desired);
   f.tables.user_skills[0].level = 'advanced';
-  f.tables.user_skills.push({ user_id: b, skill_id: python, direction: 'teach', level: 'intermediate' });
-  await f.browser.savePublicOnboarding({ display_name: 'Edited Public A', bio: 'New public bio' }, [
-    ...desired, { skill_id: guitar, direction: 'teach' },
+  f.tables.user_skills.push({ user_id: b, skill_id: python, direction: 'teach', level: 'intermediate', goal_level: null });
+  await f.browser.savePublicOnboarding({ display_name: 'Edited Public A', bio: 'New public bio', meeting_preference: null }, [
+    ...desired, { skill_id: guitar, direction: 'teach', level: 'beginner' },
   ]);
-  await f.browser.savePublicOnboarding({ display_name: 'Edited Public A', bio: 'New public bio' }, desired);
+  await f.browser.savePublicOnboarding({ display_name: 'Edited Public A', bio: 'New public bio', meeting_preference: null }, desired);
   assert.equal(f.tables.profiles[0].display_name, 'Edited Public A');
-  assert.equal(f.tables.user_skills.find(row => row.user_id === a && row.skill_id === python).level, 'advanced');
+  assert.equal(f.tables.user_skills.find(row => row.user_id === a && row.skill_id === python).level, 'beginner');
   assert.equal(f.tables.user_skills.filter(row => row.user_id === a).length, 2);
   assert.equal(f.tables.user_skills.filter(row => row.user_id === b).length, 1);
 });
 
 test('integration: failures are explicit, partial saves reconcile on retry, and signed-out access never writes', async () => {
   const f = fixture();
-  const desired = [{ skill_id: python, direction: 'teach' }, { skill_id: guitar, direction: 'learn' }];
+  const desired = [{ skill_id: python, direction: 'teach', level: 'beginner' }, { skill_id: guitar, direction: 'learn', level: 'beginner' }];
   f.failWrite('user_skills');
-  await assert.rejects(() => f.browser.savePublicOnboarding({ display_name: 'Public A', bio: '' }, desired), { status: 503 });
+  await assert.rejects(() => f.browser.savePublicOnboarding({ display_name: 'Public A', bio: '', meeting_preference: null }, desired), { status: 503 });
   assert.equal(f.tables.profiles.length, 1); assert.equal(f.tables.user_skills.length, 0);
   f.failWrite(null);
-  await f.browser.savePublicOnboarding({ display_name: 'Public A', bio: '' }, desired);
+  await f.browser.savePublicOnboarding({ display_name: 'Public A', bio: '', meeting_preference: null }, desired);
   assert.equal(f.tables.user_skills.length, 2);
   f.failRead('profiles');
   await assert.rejects(() => f.browser.loadDiscovery(), { status: 503, code: 'DISCOVERY_UNAVAILABLE' });
   f.failRead(null); f.signOut();
   const previous = JSON.stringify(f.tables);
-  await assert.rejects(() => f.browser.savePublicOnboarding({ display_name: 'Forged', bio: '' }, desired), { status: 401 });
+  await assert.rejects(() => f.browser.savePublicOnboarding({ display_name: 'Forged', bio: '', meeting_preference: null }, desired), { status: 401 });
   assert.equal(JSON.stringify(f.tables), previous);
 });
 
@@ -173,7 +190,9 @@ test('backend APIs reject ownership spoofing, unknown catalog IDs, Unicode inval
   assert.equal((await send('/api/profiles/me', 'PATCH', { display_name: 'Name', bio: 'x'.repeat(9000) })).status, 413);
   assert.equal((await send('/api/user-skills', 'POST', { user_id: b, skill_id: python, direction: 'teach' })).status, 400);
   assert.equal((await send('/api/user-skills', 'POST', { skill_id: python, direction: 'teach' })).status, 409);
-  await f.browser.savePublicOnboarding({ display_name: 'Public A', bio: '' }, []);
+  await f.browser.savePublicOnboarding({ display_name: 'Public A', bio: '', meeting_preference: null }, [
+    { skill_id: python, direction: 'teach', level: 'beginner' }, { skill_id: guitar, direction: 'learn', level: 'beginner' },
+  ]);
   assert.equal((await send('/api/user-skills', 'POST', { skill_id: id(999), direction: 'teach' })).status, 400);
   assert.ok(f.calls.every(call => call.values?.id !== b && call.values?.user_id !== b));
 });

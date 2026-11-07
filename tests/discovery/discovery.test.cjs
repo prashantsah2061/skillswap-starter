@@ -7,9 +7,9 @@ const validator = loadTs('backend/src/lib/validators/discovery.ts');
 const matching = loadTs('backend/src/lib/discovery/matching.ts');
 const id = n => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const actor = id(1), python = id(9001), guitar = id(9002);
-const profile = n => ({ id: id(n), display_name: `Member ${n}`, bio: 'Fixture profile' });
+const profile = n => ({ id: id(n), display_name: `Member ${n}`, bio: 'Fixture profile', meeting_preference: null, suspended_at: null, visible: true, onboarded: true });
 const listing = (user, skill, direction, name = skill === python ? 'Python' : 'Guitar') =>
-  ({ user_id: user, skill_id: skill, direction, skill: { id: skill, name } });
+  ({ user_id: user, skill_id: skill, direction, level: 'beginner', goal_level: null, skill: { id: skill, name } });
 const ownSkills = [listing(actor, python, 'teach'), listing(actor, guitar, 'learn')];
 const reciprocal = user => [listing(user, guitar, 'teach'), listing(user, python, 'learn')];
 const json = value => JSON.parse(JSON.stringify(value));
@@ -42,13 +42,42 @@ test('matching requires both directions and canonical IDs, with exact overlap ex
   });
 });
 
+test('rankings put reciprocal exchanges above one-way and use stable IDs for ties', async () => {
+  const oneWay = id(2), reciprocalId = id(3);
+  const oneWaySkills = [listing(oneWay, guitar, 'teach'), listing(oneWay, id(9003), 'learn', 'Spanish')];
+  const fixture = source({ profiles: [profile(1), profile(2), profile(3)], skills: [...ownSkills, ...oneWaySkills, ...reciprocal(reciprocalId)] });
+  const result = await service.discover(fixture, actor, { limit: 20, offset: 0, after: null, skillId: null, mode: null, includeSkipped: false });
+  assert.deepEqual(json(result.data.map(row => row.id)), [reciprocalId, oneWay]);
+  assert.equal(result.data[0].recommendation_type, 'reciprocal');
+  assert.equal(result.data[1].recommendation_type, 'one_way');
+  assert.match(result.data[1].recommendation_reason, /teach Guitar/);
+});
+
+test('catalog skill and meeting-mode filters are requirements; missing preferences stay unknown', async () => {
+  const partner = { ...profile(2), meeting_preference: 'online' };
+  const fixture = source({ profiles: [profile(1), partner], skills: [...ownSkills, ...reciprocal(id(2))] });
+  const base = { limit: 20, offset: 0, after: null, skillId: guitar, mode: 'online', includeSkipped: false };
+  assert.deepEqual(json((await service.discover(fixture, actor, base)).data.map(row => row.id)), [id(2)]);
+  assert.equal((await service.discover(fixture, actor, { ...base, mode: 'in_person' })).data.length, 0);
+  assert.equal((await service.discover(source({ profiles: [profile(1), profile(2)], skills: [...ownSkills, ...reciprocal(id(2))] }), actor, base)).data.length, 0);
+});
+
+test('known mode compatibility ranks above unknown preferences and known conflicts', async () => {
+  const own = { ...profile(1), meeting_preference: 'online' };
+  const profiles = [own, { ...profile(2), meeting_preference: 'online' }, profile(3), { ...profile(4), meeting_preference: 'in_person' }];
+  const fixture = source({ profiles, own, skills: [...ownSkills, ...[2, 3, 4].flatMap(n => reciprocal(id(n)))] });
+  const result = await service.discover(fixture, actor, { limit: 20, offset: 0, after: null, skillId: null, mode: null, includeSkipped: false });
+  assert.deepEqual(json(result.data.map(row => row.id)), [id(2), id(3), id(4)]);
+  assert.deepEqual(json(result.data.map(row => row.preference_fit)), ['compatible', 'unknown', 'incompatible']);
+});
+
 test('discovery excludes self and any outgoing swipe (like or pass)', async () => {
   const fixture = source({
     profiles: [1, 2, 3, 4].map(profile),
     skills: [...ownSkills, ...[1, 2, 3, 4].flatMap(n => reciprocal(id(n)))],
     swiped: [id(2), id(3)],
   });
-  const result = await service.discover(fixture, actor, { limit: 20, after: null });
+  const result = await service.discover(fixture, actor, { limit: 20, offset: 0, after: null, skillId: null, mode: null, includeSkipped: false });
   assert.deepEqual(json(result.data.map(p => p.id)), [id(4)]);
   assert.equal(result.meta.next_cursor, null);
 });
@@ -60,11 +89,11 @@ test('missing profile and either missing skill direction have distinct onboardin
     [source({ skills: ownSkills.slice(0, 1) }), 'SKILLS_REQUIRED'],
     [source({ skills: ownSkills.slice(1) }), 'SKILLS_REQUIRED'],
   ]) {
-    const result = await service.discover(fixture, actor, { limit: 20, after: null });
+    const result = await service.discover(fixture, actor, { limit: 20, offset: 0, after: null, skillId: null, mode: null, includeSkipped: false });
     assert.deepEqual(json(result), { data: [], meta: { next_cursor: null, reason } });
     assert.equal(fixture.calls.length, 0);
   }
-  const noMatches = await service.discover(source({ skills: ownSkills }), actor, { limit: 20, after: null });
+  const noMatches = await service.discover(source({ skills: ownSkills }), actor, { limit: 20, offset: 0, after: null, skillId: null, mode: null, includeSkipped: false });
   assert.equal(noMatches.meta.reason, null);
   assert.equal(noMatches.data.length, 0);
 });
@@ -79,12 +108,12 @@ test('sparse pagination scans beyond ineligible batches and preserves lookahead 
   let after = null;
   let pages = 0;
   do {
-    const result = await service.discover(fixture, actor, { limit: 2, after });
+    const rankAfter = after ? validator.parseDiscoveryQuery('http://local/api/discover?cursor=' + after, actor).rankAfter : null;
+    const result = await service.discover(fixture, actor, { limit: 2, offset: 0, after: null, rankAfter, skillId: null, mode: null, includeSkipped: false });
     pages++;
     seen.push(...result.data.map(p => p.id));
     if (pages === 1) assert.ok(result.meta.next_cursor);
-    after = result.meta.next_cursor
-      ? validator.parseDiscoveryQuery('http://local/api/discover?cursor=' + result.meta.next_cursor, actor).after : null;
+    after = result.meta.next_cursor;
     if (pages === 2) assert.equal(result.meta.next_cursor, null);
   } while (after && pages < 10);
   assert.equal(pages, 2);
@@ -94,21 +123,32 @@ test('sparse pagination scans beyond ineligible batches and preserves lookahead 
 test('lookahead in the same batch and page size changes never consume unseen candidates', async () => {
   const fixture = source({ profiles: [1, 2, 3, 4, 5].map(profile), batch: 100,
     skills: [...ownSkills, ...[2, 3, 4, 5].flatMap(n => reciprocal(id(n)))] });
-  const first = await service.discover(fixture, actor, { limit: 1, after: null });
+  const first = await service.discover(fixture, actor, { limit: 1, offset: 0, after: null, skillId: null, mode: null, includeSkipped: false });
   const query = validator.parseDiscoveryQuery(`http://local/api/discover?limit=3&cursor=${first.meta.next_cursor}`, actor);
   const second = await service.discover(fixture, actor, query);
   assert.deepEqual(json([...first.data, ...second.data].map(p => p.id)), [2, 3, 4, 5].map(id));
   assert.equal(second.meta.next_cursor, null);
 });
 
+test('ranked pagination does not skip profiles when cards from the previous page are swiped', async () => {
+  const swiped = [];
+  const fixture = source({ profiles: [1, 2, 3, 4, 5].map(profile), batch: 100,
+    skills: [...ownSkills, ...[2, 3, 4, 5].flatMap(n => reciprocal(id(n)))], swiped });
+  const first = await service.discover(fixture, actor, { limit: 2, offset: 0, after: null, skillId: null, mode: null, includeSkipped: false });
+  swiped.push(...first.data.map(row => row.id));
+  const query = validator.parseDiscoveryQuery(`http://local/api/discover?cursor=${first.meta.next_cursor}`, actor);
+  const next = await service.discover(fixture, actor, query);
+  assert.deepEqual(json(next.data.map(row => row.id)), [id(4), id(5)]);
+});
+
 test('cursor validation rejects malformed, foreign-user, unknown, duplicate and out-of-range parameters', () => {
   const bad = ['limit=0', 'limit=51', 'limit=-1', 'limit=1.5', 'limit=01', 'limit=', 'limit=1&limit=2',
     'actor_id=' + id(2), 'cursor=', 'cursor=***', 'cursor=e30', 'cursor=x'.repeat(100),
-    'cursor=' + validator.discoveryCursor(id(2), id(3)),
-    'cursor=' + Buffer.from(JSON.stringify({ v: 2, actor, after: id(2) })).toString('base64url'),
+    'cursor=' + validator.discoveryCursor(id(2), { id: id(3) }, { skillId: null, mode: null, includeSkipped: false }),
+    'cursor=' + Buffer.from(JSON.stringify({ v: 4, actor, after: id(2), skill: null, mode: null, skipped: false })).toString('base64url'),
     'cursor=' + Buffer.from(JSON.stringify({ v: 1, actor, after: 'not-a-uuid' })).toString('base64url')];
   for (const query of bad) assert.throws(() => validator.parseDiscoveryQuery('http://local/api/discover?' + query, actor), { status: 400 });
-  assert.deepEqual(json(validator.parseDiscoveryQuery('http://local/api/discover', actor)), { limit: 20, after: null });
+  assert.deepEqual(json(validator.parseDiscoveryQuery('http://local/api/discover', actor)), { limit: 20, offset: 0, after: null, rankAfter: null, skillId: null, mode: null, includeSkipped: false });
   assert.equal(validator.parseDiscoveryQuery('http://local/api/discover?limit=50', actor).limit, 50);
 });
 
@@ -119,6 +159,7 @@ function database({ cap = 1, failure = null, reject = false, errorCode = 'PGRST2
     profiles: [1, 2, 3].map(profile),
     user_skills: [...ownSkills, ...reciprocal(id(2)), ...reciprocal(id(3))].map(({ skill, ...row }) => ({ ...row, skills: skill })),
     swipes: [{ actor_id: actor, target_id: id(2), decision: 'pass' }, { actor_id: id(2), target_id: id(3), decision: 'like' }],
+    matches: [],
   };
   const calls = [];
   return { tables, calls, from(table) {
@@ -127,8 +168,10 @@ function database({ cap = 1, failure = null, reject = false, errorCode = 'PGRST2
     const query = {
       select(columns, options) { counted = options?.count === 'exact'; calls.push({ table, columns }); return this; },
       eq(key, value) { conditions.push(row => row[key] === value); return this; },
+      is(key, value) { conditions.push(row => row[key] === value); return this; },
       gt(key, value) { conditions.push(row => row[key] > value); return this; },
       in(key, values) { conditions.push(row => values.includes(row[key])); return this; },
+      or() { return this; },
       order(key) { ordering.push(key); return this; },
       limit(value) { size = value; return this; },
       range(start, end) { offset = start; size = end - start + 1; return this; },
@@ -147,7 +190,7 @@ function database({ cap = 1, failure = null, reject = false, errorCode = 'PGRST2
       },
     };
     return query;
-  } };
+  }, rpc: async () => ({ data: [], error: null }) };
 }
 const model = loadTs('backend/src/models/discovery.model.ts');
 
@@ -158,7 +201,8 @@ test('production model exhausts capped skill/swipe pages and scopes outgoing swi
   db.tables.swipes.push({ actor_id: actor, target_id: id(3), decision: 'like' });
   assert.deepEqual([...await source.swipedTargets(actor, [id(2), id(3)])], [id(2), id(3)]);
   db.tables.swipes.pop();
-  const result = await service.discover(source, actor, { limit: 1, after: null });
+  assert.deepEqual([...await source.swipedTargets(actor, [id(2), id(3)], true)], []);
+  const result = await service.discover(source, actor, { limit: 1, offset: 0, after: null, skillId: null, mode: null, includeSkipped: false });
   assert.deepEqual(json(result.data.map(row => row.id)), [id(3)]);
   assert.equal(result.meta.next_cursor, null);
   assert.ok(db.calls.every(call => !call.columns.includes('*')));
@@ -265,5 +309,5 @@ test('proxy preserves discovery 503 envelope before handler; unrelated routes re
   const result = await proxy.proxy({ nextUrl: new URL('http://local/api/discover') });
   assert.equal(result.status, 503);
   assert.equal((await result.json()).error.code, 'DISCOVERY_UNAVAILABLE');
-  await assert.rejects(() => proxy.proxy({ nextUrl: new URL('http://local/api/matches') }), /configuration details/);
+  await assert.rejects(() => proxy.proxy({ nextUrl: new URL('http://local/api/unknown') }), /configuration details/);
 });

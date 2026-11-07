@@ -146,7 +146,7 @@ test('provider and pool failures explicitly fall back to the exact baseline; bas
   }
   const f = discoveryFixture();
   const result = await f.service.discoverWithSemantics(f.source, actor, { limit: 20, after: id(1) });
-  assert.deepEqual(JSON.parse(JSON.stringify(result.data.map(row => row.id))), [id(5)]);
+  assert.deepEqual(JSON.parse(JSON.stringify(result.data.map(row => row.id))), [id(5), id(2), id(3), id(4)]);
   assert.equal(f.providerCalls(), 0);
   f.disable();
   assert.equal((await f.service.discoverWithSemantics(f.source, actor, { limit: 20, after: null })).meta.matching, undefined);
@@ -171,7 +171,7 @@ test('authorization/data failures during continuation remain failures rather tha
   assert.equal(f.providerCalls(), 1);
 });
 
-test('frontend preserves directional evidence and renders similarities without probability or identity claims', async () => {
+test('frontend client can parse the dormant semantic payload but discovery cards do not show unsupported scores', async () => {
   const React = require('react');
   const { renderToStaticMarkup } = require('react-dom/server');
   const result = semantic.semanticCandidate(matching.skillsByDirection(own), { id: id(2), display_name: 'Member', bio: '' }, [
@@ -185,9 +185,7 @@ test('frontend preserves directional evidence and renders similarities without p
     '@/components/demo/ui': { Badge: ({ children }) => React.createElement('span', null, children) },
   });
   const html = renderToStaticMarkup(React.createElement(SkillCard, { profile: response.data[0] }));
-  assert.match(html, /Learning similarity: 0.80/);
-  assert.match(html, /Teaching similarity: 1.00/);
-  assert.match(html, /different catalog skills/);
-  assert.match(html, /not a probability/);
-  assert.doesNotMatch(html, /80%/);
+  assert.match(html, /Teaches/);
+  assert.match(html, /Wants to learn/);
+  assert.doesNotMatch(html, /similarity|cosine|probability|80%|1\.00/);
 });

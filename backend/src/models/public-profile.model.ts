@@ -4,9 +4,9 @@ import { z } from "zod";
 import { DiscoveryError, unavailable } from "../lib/discovery/errors";
 import { discoveryUuid } from "../lib/validators/discovery";
 
-const profile = z.object({ id: discoveryUuid, display_name: z.string(), bio: z.string() });
+const profile = z.object({ id: discoveryUuid, display_name: z.string(), bio: z.string(), meeting_preference: z.enum(["online", "in_person", "either"]).nullable() });
 const skill = z.object({ id: discoveryUuid, name: z.string() });
-const listing = z.object({ skill_id: discoveryUuid, direction: z.enum(["teach", "learn"]), level: z.enum(["beginner", "intermediate", "advanced"]) });
+const listing = z.object({ skill_id: discoveryUuid, direction: z.enum(["teach", "learn"]), level: z.enum(["beginner", "intermediate", "advanced"]), goal_level: z.enum(["beginner", "intermediate", "advanced"]).nullable() });
 
 async function read<T>(query: PromiseLike<{ data: unknown; error: unknown }>, schema: z.ZodType<T>) {
   let response;
@@ -31,21 +31,21 @@ export function publicProfileModel(client: SupabaseClient) {
       if (!parsed.data.length) throw unavailable();
     }
   }
-  const own = (actor: string) => read(client.from("profiles").select("id,display_name,bio").eq("id", actor).maybeSingle(), profile.nullable());
+  const own = (actor: string) => read(client.from("profiles").select("id,display_name,bio,meeting_preference").eq("id", actor).maybeSingle(), profile.nullable());
   return {
     own,
     catalog: () => all((offset) => client.from("skills").select("id,name", { count: "exact" }).order("id").range(offset, offset + 99), skill),
     listings: (actor: string) => all((offset) => client.from("user_skills")
-      .select("skill_id,direction,level", { count: "exact" }).eq("user_id", actor)
+      .select("skill_id,direction,level,goal_level", { count: "exact" }).eq("user_id", actor)
       .order("skill_id").order("direction").range(offset, offset + 99), listing),
-    async saveProfile(actor: string, input: { display_name: string; bio: string }) {
+    async saveProfile(actor: string, input: { display_name: string; bio: string; meeting_preference: "online" | "in_person" | "either" | null }) {
       const existing = await own(actor);
       // No upsert: UPDATE(id) is deliberately not granted by this schema.
       const query = existing ? client.from("profiles").update(input).eq("id", actor)
         : client.from("profiles").insert({ id: actor, ...input });
       return read(query.select("id,display_name,bio").single(), profile);
     },
-    async addSkill(actor: string, input: { skill_id: string; direction: "teach" | "learn" }) {
+    async addSkill(actor: string, input: { skill_id: string; direction: "teach" | "learn"; level: "beginner" | "intermediate" | "advanced"; goal_level: "beginner" | "intermediate" | "advanced" | null }) {
       if (!await own(actor)) throw new DiscoveryError(409, "PROFILE_REQUIRED", "Save your public profile first.");
       const exists = await read(client.from("skills").select("id,name").eq("id", input.skill_id).maybeSingle(), skill.nullable());
       if (!exists) throw new DiscoveryError(400, "VALIDATION_ERROR", "Choose a skill from the catalog.");
@@ -55,6 +55,9 @@ export function publicProfileModel(client: SupabaseClient) {
         onConflict: "user_id,skill_id,direction", ignoreDuplicates: true,
       });
       if (error) throw unavailable();
+      const { error: levelError } = await client.from("user_skills").update({ level: input.level, goal_level: input.goal_level })
+        .eq("user_id", actor).eq("skill_id", input.skill_id).eq("direction", input.direction);
+      if (levelError) throw unavailable();
       return input;
     },
     async removeSkill(actor: string, input: { skill_id: string; direction: "teach" | "learn" }) {

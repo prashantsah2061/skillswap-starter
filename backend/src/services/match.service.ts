@@ -7,5 +7,7 @@ export async function recordSwipe(client: SupabaseClient, targetId: string, deci
   return swipeModel(client).record(targetId, decision);
 }
 
+export const listPendingInterests = (client: SupabaseClient, actorId: string) => swipeModel(client).pending(actorId);
+
 export const listMatches = (client: SupabaseClient, actorId: string) =>
   matchModel(client).list(actorId);
