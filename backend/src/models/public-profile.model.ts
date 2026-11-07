@@ -43,7 +43,7 @@ export function publicProfileModel(client: SupabaseClient) {
       // No upsert: UPDATE(id) is deliberately not granted by this schema.
       const query = existing ? client.from("profiles").update(input).eq("id", actor)
         : client.from("profiles").insert({ id: actor, ...input });
-      return read(query.select("id,display_name,bio").single(), profile);
+      return read(query.select("id,display_name,bio,meeting_preference").single(), profile);
     },
     async addSkill(actor: string, input: { skill_id: string; direction: "teach" | "learn"; level: "beginner" | "intermediate" | "advanced"; goal_level: "beginner" | "intermediate" | "advanced" | null }) {
       if (!await own(actor)) throw new DiscoveryError(409, "PROFILE_REQUIRED", "Save your public profile first.");
