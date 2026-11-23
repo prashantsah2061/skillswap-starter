@@ -82,6 +82,33 @@ test('discovery excludes self and any outgoing swipe (like or pass)', async () =
   assert.equal(result.meta.next_cursor, null);
 });
 
+test('browse includes members without skill overlap and search preserves exclusions and pagination', async () => {
+  const teachCeramics = user => [listing(user, id(9003), 'teach', 'Ceramics'), listing(user, id(9004), 'learn', 'French')];
+  const profiles = [profile(1), { ...profile(2), display_name: 'Amélie' }, profile(3), profile(4), profile(5), profile(6)];
+  const fixture = source({ profiles, swiped: [id(5)], skills: [
+    ...ownSkills, ...reciprocal(id(6)), ...[2, 3, 5].flatMap(n => teachCeramics(id(n))),
+    listing(id(4), id(9003), 'teach', 'Ceramics'),
+  ] });
+  const query = params => validator.parseDiscoveryQuery('http://local/api/discover?' + params, actor);
+  const all = await service.discover(fixture, actor, query('browse=true'));
+  assert.deepEqual(json(all.data.map(row => row.id)), [id(6), id(2), id(3)]);
+  assert.equal(all.data[1].recommendation_type, undefined);
+  assert.deepEqual(json((await service.discover(fixture, actor, query('q=AME%CC%81'))).data.map(row => row.id)), [id(2)]);
+  const first = await service.discover(fixture, actor, query('q=CERAMICS&limit=1'));
+  const cursor = first.meta.next_cursor;
+  assert.ok(cursor);
+  const second = await service.discover(fixture, actor, query('q=ceramics&limit=1&cursor=' + cursor));
+  assert.deepEqual(json([...first.data, ...second.data].map(row => row.id)), [id(2), id(3)]);
+  assert.equal(second.meta.next_cursor, null);
+  assert.throws(() => query('q=french&cursor=' + cursor), { status: 400 });
+  assert.throws(() => query('q=' + 'x'.repeat(101)), { status: 400 });
+  assert.throws(() => query('browse=all'), { status: 400 });
+
+  const beforeOnboarding = await service.discover(source({ profiles, own: null, skills: teachCeramics(id(2)) }), actor, query('browse=true'));
+  assert.equal(beforeOnboarding.meta.reason, 'PROFILE_REQUIRED');
+  assert.deepEqual(json(beforeOnboarding.data.map(row => row.id)), [id(2)]);
+});
+
 test('missing profile and either missing skill direction have distinct onboarding reasons', async () => {
   for (const [fixture, reason] of [
     [source({ own: null }), 'PROFILE_REQUIRED'],

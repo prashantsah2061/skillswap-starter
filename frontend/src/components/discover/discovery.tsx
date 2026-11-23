@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
-import type { DiscoverResponse, PendingInterest } from "@shared/discovery";
+import type { DiscoverResponse, DiscoveryCandidate, PendingInterest } from "@shared/discovery";
 import { loadDiscovery, loadPendingInterests, loadPublicOnboarding, recordSwipe, PublicApiError, type PublicSkill, type PublicSelection } from "@/lib/discovery/client";
 import { SkillCard } from "./skill-card";
 
@@ -10,6 +10,8 @@ export function Discovery() {
   const [catalog, setCatalog] = useState<PublicSkill[]>([]);
   const [selections, setSelections] = useState<PublicSelection[]>([]);
   const [pending, setPending] = useState<PendingInterest[]>([]);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
   const [skillId, setSkillId] = useState("");
   const [mode, setMode] = useState<"" | "online" | "in_person">("");
   const [includeSkipped, setIncludeSkipped] = useState(false);
@@ -19,12 +21,12 @@ export function Discovery() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ kind: "pending" | "matched"; name: string; matchId?: string } | null>(null);
   const active = useRef<AbortController | null>(null);
-  const filters = { skillId: skillId || undefined, mode: mode || undefined, includeSkipped };
+  const filters = { skillId: skillId || undefined, mode: mode || undefined, includeSkipped, browse: true, search };
 
   function fetchPage(controller: AbortController, cursor: string | null) {
     return loadDiscovery(cursor, controller.signal, filters).then(page => {
       if (controller.signal.aborted) return;
-      setResult(previous => ({ ...page, data: cursor && !page.meta.reason ?
+      setResult(previous => ({ ...page, data: cursor ?
         [...(previous?.data || []), ...page.data.filter(row => !previous?.data.some(old => old.id === row.id))] : page.data }));
     }).catch(reason => {
       if (controller.signal.aborted) return;
@@ -62,11 +64,13 @@ export function Discovery() {
     return () => active.current?.abort();
   // Restart from the top when explicit discovery filters change.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [skillId, mode, includeSkipped]);
+  }, [skillId, mode, includeSkipped, search]);
 
   const reason = result?.meta.reason;
   const reciprocal = result?.data.filter(row => row.recommendation_type === "reciprocal") ?? [];
   const oneWay = result?.data.filter(row => row.recommendation_type === "one_way") ?? [];
+  const otherMembers = result?.data.filter(row => !row.recommendation_type) ?? [];
+  const hasFilters = Boolean(search || skillId || mode);
 
   async function decide(profileId: string, decision: "like" | "pass") {
     if (!result || busyId) return;
@@ -88,7 +92,34 @@ export function Discovery() {
     } finally { setBusyId(null); }
   }
 
-  function clearFilters() { setSkillId(""); setMode(""); }
+  function resetFeed() {
+    active.current?.abort();
+    setResult(null); setError(""); setAuthPath(null); setLoading(true);
+  }
+
+  function applySearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const nextSearch = searchInput.trim();
+    if (nextSearch === search) return;
+    resetFeed();
+    setSearch(nextSearch);
+  }
+
+  function clearFilters() {
+    resetFeed();
+    setSearchInput(""); setSearch(""); setSkillId(""); setMode("");
+  }
+
+  function revisitSkipped(next: boolean) {
+    resetFeed();
+    setIncludeSkipped(next);
+  }
+
+  function renderProfile(profile: DiscoveryCandidate) {
+    return <SkillCard key={profile.id} profile={profile} busy={Boolean(busyId)}
+      onDecision={reason ? undefined : decision => void decide(profile.id, decision)}
+      onBlock={id => setResult(current => current ? { ...current, data: current.data.filter(row => row.id !== id) } : current)} />;
+  }
 
   return <>
     <div className="discovery-heading"><span className="eyebrow">BETTER TOGETHER</span><h1>Meet your next skill partner</h1>
@@ -103,9 +134,13 @@ export function Discovery() {
       </aside>
       <div className="profile-stack" aria-busy={loading}>
         <section className="card discovery-filters" aria-label="Discovery filters">
-          <label>Skill to learn<select value={skillId} onChange={event => setSkillId(event.target.value)}><option value="">Any skill</option>{selections.filter(row => row.direction === "learn").map(row => <option value={row.skill_id} key={row.skill_id}>{catalog.find(item => item.id === row.skill_id)?.name ?? "Saved skill"}</option>)}</select></label>
-          <label>Meeting preference<select value={mode} onChange={event => setMode(event.target.value as typeof mode)}><option value="">Any format</option><option value="online">Online</option><option value="in_person">In person</option></select></label>
-          {(skillId || mode) && <button className="text-button" type="button" onClick={clearFilters}>Clear filters</button>}
+          <form className="discovery-search" onSubmit={applySearch}>
+            <label>Search by name or skill<input type="search" value={searchInput} maxLength={100} onChange={event => setSearchInput(event.target.value)} /></label>
+            <button className="button secondary" type="submit">Search</button>
+          </form>
+          <label>Skill to learn<select value={skillId} onChange={event => { resetFeed(); setSkillId(event.target.value); }}><option value="">Any skill</option>{selections.filter(row => row.direction === "learn").map(row => <option value={row.skill_id} key={row.skill_id}>{catalog.find(item => item.id === row.skill_id)?.name ?? "Saved skill"}</option>)}</select></label>
+          <label>Meeting preference<select value={mode} onChange={event => { resetFeed(); setMode(event.target.value as typeof mode); }}><option value="">Any format</option><option value="online">Online</option><option value="in_person">In person</option></select></label>
+          {hasFilters && <button className="text-button" type="button" onClick={clearFilters}>Clear filters</button>}
         </section>
         {notice?.kind === "matched" && notice.matchId && <div className="card feedback" role="status"><strong>You matched with {notice.name}!</strong><p>Start a conversation to plan your skill exchange.</p><Link className="button" href={`/messages/${notice.matchId}`}>Send message</Link> <button className="button secondary" onClick={() => setNotice(null)}>Keep exploring</button></div>}
         {notice?.kind === "pending" && <p className="feedback" role="status">Interest sent. You’ll match if they’re interested too.</p>}
@@ -113,15 +148,16 @@ export function Discovery() {
         {loading && <p className="card empty" role="status">{result ? "Loading more partners…" : "Finding skill partners…"}</p>}
         {error && <div className="card empty"><p role="alert">{error}</p>{authPath ? <Link className="button" href={authPath}>{authPath === "/mfa" ? "Verify your second factor" : "Sign in again"}</Link> : <button className="button" onClick={() => reload(result?.meta.next_cursor || null)}>Try again</button>}</div>}
         {reason && <div className="card empty"><h2>{reason === "PROFILE_REQUIRED" ? "Introduce yourself to the community" : "Choose your skill exchange"}</h2><p>Add what you can teach and what you want to learn.</p><Link className="button lime" href="/onboarding">Set up your public profile →</Link></div>}
-        {!loading && !error && result && !reason && !result.data.length && <div className="card empty"><h2>{skillId || mode ? "No partners found with these filters." : includeSkipped ? "You’ve reached the end of skipped profiles." : "No partners in this queue yet."}</h2>
-          {(skillId || mode) && <button className="button secondary" onClick={clearFilters}>Clear filters</button>}
-          {!includeSkipped && !skillId && !mode && <><p>Try another skill, or revisit profiles you skipped.</p><button className="button" onClick={() => setIncludeSkipped(true)}>Revisit skipped profiles</button></>}
-          {includeSkipped && <button className="button secondary" onClick={() => setIncludeSkipped(false)}>Back to new recommendations</button>}
+        {!loading && !error && result && (!reason || hasFilters) && !result.data.length && <div className="card empty"><h2>{hasFilters ? "No partners found with these filters." : includeSkipped ? "You’ve reached the end of skipped profiles." : "No partners in this queue yet."}</h2>
+          {hasFilters && <button className="button secondary" onClick={clearFilters}>Clear filters</button>}
+          {!includeSkipped && !hasFilters && <><p>Try another skill, or revisit profiles you skipped.</p><button className="button" onClick={() => revisitSkipped(true)}>Revisit skipped profiles</button></>}
+          {includeSkipped && <button className="button secondary" onClick={() => revisitSkipped(false)}>Back to new recommendations</button>}
         </div>}
-        {!!reciprocal.length && <section aria-labelledby="reciprocal-heading"><h2 id="reciprocal-heading" className="recommendation-heading">Reciprocal skill swaps</h2>{reciprocal.map(profile => <SkillCard key={profile.id} profile={profile} busy={Boolean(busyId)} onDecision={decision => void decide(profile.id, decision)} onBlock={id => setResult(current => current ? { ...current, data: current.data.filter(row => row.id !== id) } : current)} />)}</section>}
-        {!!oneWay.length && <section aria-labelledby="one-way-heading"><h2 id="one-way-heading" className="recommendation-heading">Other potential partners</h2><p className="muted">These people have one relevant skill in common with your goals.</p>{oneWay.map(profile => <SkillCard key={profile.id} profile={profile} busy={Boolean(busyId)} onDecision={decision => void decide(profile.id, decision)} onBlock={id => setResult(current => current ? { ...current, data: current.data.filter(row => row.id !== id) } : current)} />)}</section>}
+        {!!reciprocal.length && <section aria-labelledby="reciprocal-heading"><h2 id="reciprocal-heading" className="recommendation-heading">Reciprocal skill swaps</h2>{reciprocal.map(renderProfile)}</section>}
+        {!!oneWay.length && <section aria-labelledby="one-way-heading"><h2 id="one-way-heading" className="recommendation-heading">Other potential partners</h2><p className="muted">These people have one relevant skill in common with your goals.</p>{oneWay.map(renderProfile)}</section>}
+        {!!otherMembers.length && <section aria-labelledby="members-heading"><h2 id="members-heading" className="recommendation-heading">More members</h2>{otherMembers.map(renderProfile)}</section>}
         {!loading && !error && !!result?.meta.next_cursor && <button className="button" onClick={() => reload(result.meta.next_cursor)}>Load more partners</button>}
-        {!loading && !error && !!result?.data.length && !result.meta.next_cursor && <p className="muted">You’ve reached the end of these recommendations.</p>}
+        {!loading && !error && !!result?.data.length && !result.meta.next_cursor && <p className="muted">You’ve reached the end of these results.</p>}
       </div>
     </div>
   </>;

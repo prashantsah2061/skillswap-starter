@@ -17,6 +17,7 @@ function screen(file, name, client) {
       return [slots[position], value => { slots[position] = typeof value === 'function' ? value(slots[position]) : value; }];
     },
     useRef(initial) { const position = index++; return slots[position] ||= { current: initial }; },
+    useMemo(compute) { index++; return compute(); },
     useEffect(effect, deps) {
       const position = index++, previous = slots[position];
       if (!previous || deps.some((value, i) => value !== previous[i])) { pending.push(effect); slots[position] = deps; }
@@ -25,11 +26,13 @@ function screen(file, name, client) {
   const component = loadTs(file, {
     react: hooks,
     'next/link': { default: ({ children, ...props }) => React.createElement('a', props, children) },
+    'next/navigation': { useRouter: () => ({}) },
+    '@/components/safety/safety-actions': { SafetyActions: () => null },
     '@/components/demo/ui': { Badge: ({ children }) => React.createElement('span', null, children) },
     '@/lib/discovery/client': client,
   }, { Error })[name];
   let tree;
-  const render = () => { index = 0; tree = component(); return renderToStaticMarkup(tree); };
+  const render = () => { index = 0; tree = component({}); return renderToStaticMarkup(tree); };
   function elements(node) {
     if (!node || typeof node !== 'object') return [];
     if (Array.isArray(node)) return node.flatMap(elements);
@@ -37,8 +40,15 @@ function screen(file, name, client) {
   }
   return { render, elements: () => elements(tree),
     find: predicate => elements(tree).find(predicate),
-    async settle() {
-      while (pending.length) pending.shift()();
+    async settle({ replayEffects = false } = {}) {
+      while (pending.length) {
+        const effect = pending.shift();
+        const cleanup = effect();
+        if (replayEffects) {
+          cleanup?.();
+          effect();
+        }
+      }
       await new Promise(resolve => setImmediate(resolve));
       return render();
     },
@@ -48,6 +58,28 @@ class PublicApiError extends Error {
   constructor(status, code, message) { super(message); this.status = status; this.code = code; }
 }
 const empty = reason => ({ data: [], meta: { next_cursor: null, reason } });
+
+for (const [component, folder, loadingText, emptyText] of [
+  ['Messages', 'messages', /Loading conversations/, /Your conversations will appear here/],
+  ['Matches', 'matches', /Loading your matches/, /No matches yet/],
+]) {
+  test(`${component} ignores a canceled request when the replacement is empty`, async () => {
+    let requests = 0;
+    const view = screen(`frontend/src/components/${folder}/${folder}.tsx`, component, {
+      loadMatches(signal) {
+        if (++requests > 1) return Promise.resolve({ data: [] });
+        return new Promise((resolve, reject) => {
+          signal.addEventListener('abort', () => reject(new Error('Fetch is aborted')), { once: true });
+        });
+      },
+    });
+    assert.match(view.render(), loadingText);
+    const html = await view.settle({ replayEffects: true });
+    assert.equal(requests, 2);
+    assert.match(html, emptyText);
+    assert.doesNotMatch(html, /Fetch is aborted|role="alert"/);
+  });
+}
 
 test('discovery screen renders loading, onboarding, true empty, provider errors and auth recovery without demo fallback', async () => {
   for (const [result, error, expected] of [
@@ -95,6 +127,39 @@ test('discovery screen retries and appends real pages, preserving loaded results
   html = await view.settle();
   assert.match(html, /Real member 2/); assert.match(html, /Real member 3/); assert.match(html, /reached the end/);
   assert.deepEqual(cursors, [null, 'opaque-next', 'opaque-next']);
+});
+
+test('Discover shows browse cards before onboarding and submits a new member search', async () => {
+  const requests = [];
+  const view = screen('frontend/src/components/discover/discovery.tsx', 'Discovery', { PublicApiError,
+    loadDiscovery: async (cursor, signal, { browse, search }) => {
+      requests.push({ cursor, browse, search });
+      return {
+        data: search ? [] : [{
+          id: id(2), display_name: 'Avery', bio: '', teaches: [{ id: id(3), name: 'Ceramics' }], learns: [],
+          compatibility: { you_can_learn: [], you_can_teach: [] },
+        }],
+        meta: { reason: 'PROFILE_REQUIRED', next_cursor: null },
+      };
+    },
+    loadPublicOnboarding: async () => ({ catalog: [], selections: [] }),
+    loadPendingInterests: async () => ({ data: [] }),
+  });
+  view.render();
+  const initial = await view.settle();
+  assert.match(initial, /More members/);
+  assert.match(initial, /Avery/);
+  assert.match(initial, /Ceramics/);
+  assert.doesNotMatch(initial, />Interested</);
+  view.find(node => node.type === 'input' && node.props.type === 'search').props.onChange({ target: { value: ' Guitar ' } });
+  view.render();
+  view.find(node => node.type === 'form').props.onSubmit({ preventDefault() {} });
+  assert.doesNotMatch(view.render(), /Avery/);
+  assert.match(await view.settle(), /No partners found with these filters/);
+  assert.deepEqual(requests, [
+    { cursor: null, browse: true, search: '' },
+    { cursor: null, browse: true, search: 'Guitar' },
+  ]);
 });
 
 test('public onboarding starts blank, saves only explicit canonical selections and reports partial-save retry', async () => {

@@ -131,6 +131,11 @@ test('integration: explicit onboarding persists canonical skills and finds recip
   await f.browser.savePublicOnboarding({ display_name: 'Public B', bio: 'Public exchange', meeting_preference: null }, [
     { skill_id: guitar, direction: 'teach', level: 'beginner' }, { skill_id: python, direction: 'learn', level: 'beginner' },
   ]);
+  f.as(id(3));
+  await f.browser.savePublicOnboarding({ display_name: 'Public C', bio: '', meeting_preference: 'online' }, [
+    { skill_id: python, direction: 'teach', level: 'beginner' }, { skill_id: guitar, direction: 'learn', level: 'beginner' },
+  ]);
+  f.tables.profiles.push({ id: id(4), display_name: 'Public C draft', bio: '', meeting_preference: 'online', visible: false, onboarded: false, suspended_at: null });
   f.as(a);
   const loaded = await f.browser.loadPublicOnboarding();
   assert.equal(loaded.profile.display_name, 'Public A');
@@ -138,6 +143,12 @@ test('integration: explicit onboarding persists canonical skills and finds recip
   const recommendations = await f.browser.loadDiscovery();
   assert.deepEqual(normalize(recommendations.data.map(row => row.id)), [b]);
   assert.equal(recommendations.data[0].compatibility.you_can_learn[0].id, guitar);
+  const browsed = await f.browser.loadDiscovery(null, undefined, { browse: true });
+  assert.deepEqual(normalize(browsed.data.map(row => row.id)), [b, id(3)]);
+  const searched = await f.browser.loadDiscovery(null, undefined, { search: 'pUbLiC C' });
+  assert.deepEqual(normalize(searched.data.map(row => row.id)), [id(3)]);
+  assert.equal(searched.data[0].teaches[0].name, 'Python');
+  assert.equal(searched.data[0].recommendation_type, undefined);
   assert.ok(f.forwarded.every(call => call.options.headers.get('cookie') === cookie));
   assert.ok(f.forwarded.every(call => call.options.cache === 'no-store' && call.options.redirect === 'manual'));
   assert.ok(f.calls.every(call => call.table !== 'account_profiles'));

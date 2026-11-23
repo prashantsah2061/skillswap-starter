@@ -21,8 +21,11 @@ export function Messages({ selectedId }: { selectedId?: string }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    loadMatches(controller.signal).then(result => setMatches(result.data))
-      .catch(reason => setError(reason instanceof Error ? reason.message : "Conversations could not be loaded."))
+    loadMatches(controller.signal).then(result => {
+      if (!controller.signal.aborted) setMatches(result.data);
+    }).catch(reason => {
+      if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Conversations could not be loaded.");
+    })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, []);
@@ -31,8 +34,11 @@ export function Messages({ selectedId }: { selectedId?: string }) {
     if (!active) return;
     const controller = new AbortController();
     loadMessages(active.id, null, controller.signal).then(result => {
+      if (controller.signal.aborted) return;
       setMessages(result.data); setCursor(result.meta.next_cursor); setLoadedFor(active.id); setError("");
-    }).catch(reason => setError(reason instanceof Error ? reason.message : "Messages could not be loaded."))
+    }).catch(reason => {
+      if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Messages could not be loaded.");
+    })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [active]);

@@ -10,8 +10,11 @@ export function Matches() {
   const [error, setError] = useState("");
   useEffect(() => {
     const controller = new AbortController();
-    loadMatches(controller.signal).then(result => setMatches(result.data))
-      .catch(reason => setError(reason instanceof Error ? reason.message : "Matches could not be loaded."))
+    loadMatches(controller.signal).then(result => {
+      if (!controller.signal.aborted) setMatches(result.data);
+    }).catch(reason => {
+      if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Matches could not be loaded.");
+    })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, []);

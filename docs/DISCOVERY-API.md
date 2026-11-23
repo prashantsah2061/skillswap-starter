@@ -19,7 +19,7 @@ Bearer authentication is not implemented. No caller-supplied owner ID is accepte
 | `/api/public-profile` | `/api/profiles/me` | GET own public profile/null; PATCH create/update explicit public fields; POST publish after saving skills |
 | `/api/skills` | `/api/skills` | GET full visible canonical catalog |
 | `/api/user-skills` | `/api/user-skills` | GET own listings; POST add; DELETE remove |
-| `/api/discover` | `/api/discover` | GET reciprocal and one-way recommendations |
+| `/api/discover` | `/api/discover` | GET recommendations and browse or search published member profiles |
 | `/api/swipes` | `/api/swipes` | GET pending outgoing interests; POST like/pass |
 
 Public-profile PATCH accepts only `display_name`, `bio`, and nullable
@@ -48,6 +48,13 @@ zeroes), opaque `cursor`, `skill` (catalog UUID the user wants to learn), `mode`
 parameters, changed filters during pagination, and another user's cursors return
 400. The actor and skills come from the session and persisted listings.
 
+The Discover page sends `browse=true` to include eligible profiles without skill
+overlap after recommendations. The optional `q` parameter also enables browsing
+and matches up to 100 characters against display names and taught or wanted
+skill names, ignoring case. In browse mode, the `skill` filter matches a skill
+the candidate teaches. Signed-in members can browse before completing public
+onboarding. The onboarding reason can therefore accompany browse results.
+
 Shared types: `shared/types/discovery.ts`.
 
 ```ts
@@ -55,8 +62,8 @@ type Skill = { id: string; name: string };
 type DiscoverResponse = {
   data: Array<{
     id: string; display_name: string; bio: string;
-    recommendation_type: "reciprocal" | "one_way";
-    recommendation_reason: string;
+    recommendation_type?: "reciprocal" | "one_way";
+    recommendation_reason?: string;
     teaches: Skill[]; learns: Skill[];
     compatibility: { you_can_learn: Skill[]; you_can_teach: Skill[] };
   }>;

@@ -8,10 +8,10 @@ import { unavailable } from "../lib/discovery/errors";
 export async function discover(source: DiscoverySource, actorId: string, query: DiscoveryQuery): Promise<DiscoverResponse> {
   query = { ...query, offset: query.offset ?? 0, after: query.after ?? null, rankAfter: query.rankAfter ?? null, skillId: query.skillId ?? null, mode: query.mode ?? null, includeSkipped: query.includeSkipped ?? false };
   const [profile, listings] = await Promise.all([source.ownProfile(actorId), source.skillsFor([actorId])]);
-  const empty = (reason: DiscoverResponse["meta"]["reason"]): DiscoverResponse => ({ data: [], meta: { next_cursor: null, reason } });
-  if (!profile) return empty("PROFILE_REQUIRED");
   const actor = skillsByDirection(listings);
-  if (!actor.teaches.length || !actor.learns.length) return empty("SKILLS_REQUIRED");
+  const reason = !profile ? "PROFILE_REQUIRED" : !actor.teaches.length || !actor.learns.length ? "SKILLS_REQUIRED" : null;
+  if (reason && !query.browse) return { data: [], meta: { next_cursor: null, reason } };
+  const search = query.search;
 
   const eligible: DiscoveryCandidate[] = [];
   let after: string | null = null;
@@ -34,10 +34,18 @@ export async function discover(source: DiscoverySource, actorId: string, query: 
       const candidateSkills = skillsByUser.get(candidate.id) ?? [];
       if (!candidateSkills.some((row) => row.direction === "teach") || !candidateSkills.some((row) => row.direction === "learn")) continue;
       if (query.mode && candidate.meeting_preference !== query.mode && candidate.meeting_preference !== "either") continue;
-      const recommendation = candidateRecommendation(actor, profile.meeting_preference, listings, candidate, candidateSkills);
-      if (!recommendation) continue;
-      if (query.skillId && !recommendation.compatibility.you_can_learn.some((skill) => skill.id === query.skillId)) continue;
-      eligible.push(recommendation);
+      const recommendation = reason ? null : candidateRecommendation(actor, profile?.meeting_preference ?? null, listings, candidate, candidateSkills);
+      if (query.browse) {
+        if (query.skillId && !candidateSkills.some((row) => row.direction === "teach" && row.skill_id === query.skillId)) continue;
+        if (search && ![candidate.display_name, ...candidateSkills.map((row) => row.skill.name)]
+          .some((label) => label.normalize("NFC").toLowerCase().includes(search))) continue;
+        eligible.push(recommendation ?? {
+          ...candidate, ...skillsByDirection(candidateSkills),
+          compatibility: { you_can_learn: [], you_can_teach: [] },
+        });
+      } else if (recommendation && (!query.skillId || recommendation.compatibility.you_can_learn.some((skill) => skill.id === query.skillId))) {
+        eligible.push(recommendation);
+      }
     }
     after = profiles[profiles.length - 1].id;
   }
@@ -49,5 +57,5 @@ export async function discover(source: DiscoverySource, actorId: string, query: 
   } as DiscoveryCandidate) > 0) : ranked;
   const data = remaining.slice(0, query.limit);
   const hasMore = remaining.length > data.length;
-  return { data, meta: { next_cursor: hasMore ? discoveryCursor(actorId, data[data.length - 1], query) : null, reason: null } };
+  return { data, meta: { next_cursor: hasMore ? discoveryCursor(actorId, data[data.length - 1], query) : null, reason } };
 }

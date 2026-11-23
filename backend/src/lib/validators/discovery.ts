@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer";
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import { DiscoveryError } from "../discovery/errors";
 
@@ -8,17 +9,22 @@ const rankedCursorSchema = z.object({
   v: z.literal(4), actor: discoveryUuid,
   after: z.object({ id: discoveryUuid, reciprocal: z.boolean(), skills: z.number().int().min(0), preference: z.enum(["compatible", "incompatible", "unknown"]), level: z.number().int().min(0) }).strict(),
   skill: discoveryUuid.nullable(), mode: z.enum(["online", "in_person"]).nullable(), skipped: z.boolean(),
+  browse: z.literal(true).optional(), search: z.string().regex(/^[A-Za-z0-9_-]{43}$/).optional(),
 }).strict();
 const semanticCursorSchema = z.object({ v: z.literal(2), actor: discoveryUuid, snapshot: discoveryUuid, offset: z.number().int().min(0).max(500) }).strict();
 export type DiscoveryModeFilter = "online" | "in_person";
 export type DiscoveryRankCursor = z.infer<typeof rankedCursorSchema>["after"];
-export type DiscoveryQuery = { limit: number; offset: number; after: string | null; rankAfter?: DiscoveryRankCursor | null; semantic?: { snapshot: string; offset: number }; skillId: string | null; mode: DiscoveryModeFilter | null; includeSkipped: boolean };
+export type DiscoveryQuery = { limit: number; offset: number; after: string | null; rankAfter?: DiscoveryRankCursor | null; semantic?: { snapshot: string; offset: number }; skillId: string | null; mode: DiscoveryModeFilter | null; includeSkipped: boolean; browse?: true; search?: string };
 
 function invalid(): never { throw new DiscoveryError(400, "VALIDATION_ERROR", "Check your discovery parameters."); }
 
+function searchFingerprint(search?: string) {
+  return search && createHash("sha256").update(search).digest("base64url");
+}
+
 export function parseDiscoveryQuery(url: string, actorId: string): DiscoveryQuery {
   const params = new URL(url).searchParams;
-  for (const key of params.keys()) if (!["limit", "cursor", "skill", "mode", "include_skipped"].includes(key) || params.getAll(key).length !== 1) invalid();
+  for (const key of params.keys()) if (!["limit", "cursor", "skill", "mode", "include_skipped", "browse", "q"].includes(key) || params.getAll(key).length !== 1) invalid();
   const rawLimit = params.get("limit") ?? "20";
   if (!/^[1-9][0-9]?$/.test(rawLimit) || Number(rawLimit) > 50) invalid();
   const skillId = params.get("skill");
@@ -27,10 +33,19 @@ export function parseDiscoveryQuery(url: string, actorId: string): DiscoveryQuer
   if (modeRaw !== null && modeRaw !== "online" && modeRaw !== "in_person") invalid();
   const skippedRaw = params.get("include_skipped") ?? "false";
   if (skippedRaw !== "true" && skippedRaw !== "false") invalid();
-  const filters = { skillId, mode: modeRaw as DiscoveryModeFilter | null, includeSkipped: skippedRaw === "true" };
+  const browse = params.get("browse");
+  if (browse !== null && browse !== "true") invalid();
+  const term = params.get("q")?.trim();
+  if (term && term.length > 100) invalid();
+  const search = term?.normalize("NFC").toLowerCase();
+  const filters = {
+    skillId, mode: modeRaw as DiscoveryModeFilter | null, includeSkipped: skippedRaw === "true",
+    ...((browse || search) ? { browse: true as const } : {}),
+    ...(search ? { search } : {}),
+  };
   const cursor = params.get("cursor");
   if (cursor === null) return { limit: Number(rawLimit), offset: 0, after: null, rankAfter: null, ...filters };
-  if (!/^[A-Za-z0-9_-]{1,384}$/.test(cursor)) invalid();
+  if (!/^[A-Za-z0-9_-]{1,512}$/.test(cursor)) invalid();
   try {
     const decoded = Buffer.from(cursor, "base64url");
     if (decoded.toString("base64url") !== cursor) invalid();
@@ -38,8 +53,10 @@ export function parseDiscoveryQuery(url: string, actorId: string): DiscoveryQuer
     if (value.actor !== actorId) invalid();
     if (value.v === 4) {
       if (value.skill !== filters.skillId || value.mode !== filters.mode || value.skipped !== filters.includeSkipped) invalid();
+      if (value.browse !== filters.browse || value.search !== searchFingerprint(filters.search)) invalid();
       return { limit: Number(rawLimit), offset: 0, after: null, rankAfter: value.after, ...filters };
     }
+    if (filters.browse) invalid();
     if (value.v === 2) {
       if (filters.skillId || filters.mode || filters.includeSkipped) invalid();
       return { limit: Number(rawLimit), offset: value.offset, after: null, rankAfter: null, ...filters, semantic: { snapshot: value.snapshot, offset: value.offset } };
@@ -55,5 +72,6 @@ export function discoveryCursor(actor: string, candidate: { id: string; recommen
     v: 4, actor,
     after: { id: candidate.id, reciprocal: candidate.recommendation_type === "reciprocal", skills: candidate.reciprocal_skill_count ?? 0, preference, level: candidate.level_fit_count ?? 0 },
     skill: query.skillId, mode: query.mode, skipped: query.includeSkipped,
+    browse: query.browse, search: searchFingerprint(query.search),
   })).toString("base64url");
 }

@@ -86,12 +86,14 @@ export async function savePublicOnboarding(profile: { display_name: string; bio:
   await api("/api/public-profile", z.object({ data: z.object({ id: uuid, visible: z.literal(true), onboarded: z.literal(true) }) }), write("POST", {}));
 }
 
-export function loadDiscovery(cursor: string | null = null, signal?: AbortSignal, filters: { skillId?: string; mode?: "online" | "in_person"; includeSkipped?: boolean } = {}) {
+export function loadDiscovery(cursor: string | null = null, signal?: AbortSignal, filters: { skillId?: string; mode?: "online" | "in_person"; includeSkipped?: boolean; browse?: boolean; search?: string } = {}) {
   const params = ["limit=20"];
   if (cursor) params.push(`cursor=${encodeURIComponent(cursor)}`);
   if (filters.skillId) params.push(`skill=${encodeURIComponent(filters.skillId)}`);
   if (filters.mode) params.push(`mode=${encodeURIComponent(filters.mode)}`);
   if (filters.includeSkipped) params.push("include_skipped=true");
+  if (filters.browse) params.push("browse=true");
+  if (filters.search) params.push(`q=${encodeURIComponent(filters.search)}`);
   return api(`/api/discover?${params.join("&")}`, discovery, { signal });
 }
 
