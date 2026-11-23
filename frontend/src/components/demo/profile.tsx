@@ -1,17 +1,20 @@
 "use client";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import type { DemoProfile } from "@/lib/frontend-data";
 import Link from "next/link";
 import { useDemo } from "./demo-provider";
 import { useAccount } from "@/components/auth/account-provider";
-import { saveProfileAction } from "@/lib/profile/actions";
-import { Photo, Badge } from "./ui";
+import { saveProfileAction, uploadProfileAvatarAction } from "@/lib/profile/actions";
+import { Badge } from "./ui";
+import { Camera, UserRound } from "lucide-react";
 export function Profile() {
   const account = useAccount();
   const [saving, setSaving] = useState(false);
   const { data, update, storageWarning } = useDemo();
   const [draft, setDraft] = useState<DemoProfile | null>(null);
   const [notice, setNotice] = useState("");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoInput = useRef<HTMLInputElement>(null);
   const profile = draft || { ...data.profile, name: account.name, city: account.profile?.city || "", bio: account.profile?.bio || "" };
   function edit<K extends keyof DemoProfile>(key: K, value: DemoProfile[K]) {
     setDraft({ ...profile, [key]: value });
@@ -42,6 +45,28 @@ export function Profile() {
     } catch { setNotice("Profile could not be saved. Please try again."); }
     finally { setSaving(false); }
   }
+  async function uploadPhoto(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPhoto(true);
+    setNotice("");
+    try {
+      const formData = new FormData();
+      formData.set("avatar", file);
+      const result = await uploadProfileAvatarAction(formData);
+      if (result.error || !result.avatarUrl || !account.profile) {
+        setNotice(result.error || "Photo could not be saved. Please try again.");
+        return;
+      }
+      account.setProfile({ ...account.profile, avatar_url: result.avatarUrl });
+      setNotice("Profile picture updated.");
+    } catch {
+      setNotice("Photo could not be uploaded. Please try again.");
+    } finally {
+      setUploadingPhoto(false);
+      e.target.value = "";
+    }
+  }
   return (
     <>
       <p className="eyebrow">A LITTLE ABOUT YOU</p>
@@ -51,25 +76,29 @@ export function Profile() {
       </p>
       <form className="profile-layout" onSubmit={save}>
         <aside className="card profile-preview">
-          <Photo photo={profile.photo} alt="Demo profile photo" />
+          {account.profile?.avatar_url ? (
+            <img className="profile-avatar" src={account.profile.avatar_url} alt={`${profile.name}'s profile`} />
+          ) : (
+            <div className="profile-avatar profile-avatar-empty" aria-label="No profile picture selected">
+              <UserRound size={54} strokeWidth={1.25} aria-hidden="true" />
+            </div>
+          )}
+          <input
+            ref={photoInput}
+            className="profile-photo-input"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={uploadPhoto}
+            aria-label="Choose a profile picture"
+          />
+          <button type="button" className="profile-photo-button" disabled={uploadingPhoto || !account.profile} onClick={() => photoInput.current?.click()}>
+            <Camera size={16} aria-hidden="true" />
+            {uploadingPhoto ? "Uploading…" : account.profile?.avatar_url ? "Change profile picture" : "Add profile picture"}
+          </button>
           <Badge tone="mint">Your profile</Badge>
           <h2>{profile.name}</h2>
           <p className="muted">⌖ {profile.city}</p>
           <p>{profile.bio}</p>
-          <label>
-            Choose a placeholder photo
-            <select
-              value={profile.photo}
-              onChange={(e) => edit("photo", e.target.value)}
-            >
-              <option value="alex">Alex</option>
-              <option value="maya">Maya</option>
-              <option value="jordan">Jordan</option>
-            </select>
-          </label>
-          <small className="muted">
-            Reference-based placeholder portraits for this demo.
-          </small>
         </aside>
         <section className="card profile-form">
           <h2>Make yourself known</h2>
@@ -124,8 +153,8 @@ export function Profile() {
           )}
           <small className="muted">
             {storageWarning
-              ? "Browser storage is unavailable. Photo preferences last for this visit."
-              : "Your name, city, and bio are saved to your account. Placeholder photo preferences stay in this browser."}
+              ? "Browser storage is unavailable. Demo preferences last for this visit."
+              : "Your profile picture, name, city, and bio are saved to your account."}
           </small>
         </section>
       </form>
