@@ -184,6 +184,16 @@ small {
   object-fit: cover;
   border-radius: 50%;
 }
+.avatar-menu-fallback {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--muted);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+}
 .avatar-menu > div {
   position: absolute;
   right: 0;
@@ -2043,6 +2053,10 @@ legend {
     margin-left: auto;
   }
   .avatar-menu img {
+    width: 35px;
+    height: 35px;
+  }
+  .avatar-menu-fallback {
     width: 35px;
     height: 35px;
   }

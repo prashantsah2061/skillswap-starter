@@ -1,14 +1,13 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Logo, Photo } from "@/components/demo/ui";
+import { UserRound } from "lucide-react";
+import { Logo } from "@/components/demo/ui";
 import { useAccount } from "@/components/auth/account-provider";
 import { LogoutButton } from "@/components/auth/logout-button";
-import { useDemo } from "@/components/demo/demo-provider";
 export function SiteNav() {
   const account = useAccount();
   const path = usePathname();
-  const { data } = useDemo();
   return (
     <header className="topbar">
       <div className="nav-inner">
@@ -36,7 +35,11 @@ export function SiteNav() {
         </nav>
         <details className="avatar-menu">
           <summary>
-            <Photo photo={data.profile.photo} alt="" />
+            {account.profile?.avatar_url ? (
+              <img src={account.profile.avatar_url} alt="" />
+            ) : (
+              <span className="avatar-menu-fallback" aria-hidden="true"><UserRound size={20} /></span>
+            )}
             <span>{account.name}</span>
             <span aria-hidden="true">⌄</span>
           </summary>
