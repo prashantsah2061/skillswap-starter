@@ -118,6 +118,10 @@ export function sendMessage(matchId: string, body: string) {
   return api(`/api/matches/${matchId}/messages`, z.object({ data: message }), write("POST", { body }));
 }
 
+export function loadRealtimeToken(signal?: AbortSignal) {
+  return api("/api/realtime-token", z.object({ data: z.object({ user_id: uuid, access_token: z.string().min(1), expires_at: z.number().nullable() }) }), { signal });
+}
+
 export function loadSessions(signal?: AbortSignal) {
   return api("/api/sessions", z.object({ data: z.array(session) }), { signal });
 }

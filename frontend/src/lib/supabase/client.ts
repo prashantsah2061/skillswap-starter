@@ -11,8 +11,9 @@ export function setRememberPreference(remember: boolean) {
   });
 }
 
-// Authentication now uses server actions and HttpOnly cookies. This browser
-// helper is reserved for anonymous/public queries, not authenticated sessions.
+// Auth actions use server actions and HttpOnly cookies. Browser data queries
+// remain anonymous; Realtime can receive a verified, short-lived user token
+// through setAuth without making the refresh token readable to JavaScript.
 export function createClient() {
   const { url, key } = getSupabaseConfig();
   return createBrowserClient(url, key, {
