@@ -4,6 +4,11 @@ import { DiscoveryError, unavailable } from "../lib/discovery/errors";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
+function unavailableAt(stage: string, code?: string) {
+  console.error("[matches] list failed", { stage, code: code ?? null });
+  return unavailable();
+}
+
 export function matchModel(client: SupabaseClient) {
   return {
     async list(actorId: string) {
@@ -11,9 +16,9 @@ export function matchModel(client: SupabaseClient) {
         .select("id,user_a,user_b,created_at")
         .or(`user_a.eq.${actorId},user_b.eq.${actorId}`)
         .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(100);
-      if (error || !matches) throw unavailable();
+      if (error || !matches) throw unavailableAt("matches_query", error?.code);
       const { data: hidden, error: hiddenError } = await client.rpc("get_hidden_user_ids");
-      if (hiddenError || !Array.isArray(hidden)) throw unavailable();
+      if (hiddenError || !Array.isArray(hidden)) throw unavailableAt("hidden_users_rpc", hiddenError?.code);
       const hiddenIds = new Set(hidden.map((row: { user_id: string }) => row.user_id));
       const visibleMatches = matches.filter((row) => !hiddenIds.has(row.user_a === actorId ? row.user_b : row.user_a));
       const partnerIds = [...new Set(visibleMatches.map((row) => row.user_a === actorId ? row.user_b : row.user_a))];
@@ -23,7 +28,7 @@ export function matchModel(client: SupabaseClient) {
           .select("id,display_name,bio").in("id", partnerIds),
         client.rpc("get_match_avatar_paths", { p_partner_ids: partnerIds }),
       ]);
-      if (profileError || !profiles) throw unavailable();
+      if (profileError || !profiles) throw unavailableAt("partner_profiles_query", profileError?.code);
       const byId = new Map(profiles.map((profile) => [profile.id, profile] as const));
       // Avatar metadata is optional; an RPC/schema-cache problem must not hide
       // otherwise available matches. The client renders initials as fallback.
@@ -34,7 +39,7 @@ export function matchModel(client: SupabaseClient) {
       return visibleMatches.map((row) => {
         const partnerId = row.user_a === actorId ? row.user_b : row.user_a;
         const partner = byId.get(partnerId);
-        if (!partner) throw unavailable();
+        if (!partner) throw unavailableAt("partner_profile_missing");
         const avatarPath = avatarPathById.get(partnerId);
         const avatarUrl = avatarPath
           ? client.storage.from("avatars").getPublicUrl(avatarPath).data.publicUrl
