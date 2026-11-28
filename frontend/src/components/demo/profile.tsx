@@ -7,6 +7,52 @@ import { useAccount } from "@/components/auth/account-provider";
 import { saveProfileAction, uploadProfileAvatarAction } from "@/lib/profile/actions";
 import { Badge } from "./ui";
 import { Camera, UserRound } from "lucide-react";
+
+const maxAvatarBytes = 900 * 1024;
+const targetAvatarBytes = 800 * 1024;
+
+async function prepareAvatarUpload(file: File): Promise<File> {
+  if (file.size <= maxAvatarBytes) return file;
+  if (!new Set(["image/jpeg", "image/png", "image/webp"]).has(file.type)) {
+    throw new Error("Choose a JPG, PNG, or WebP image under 900 KB.");
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    image.src = objectUrl;
+    await image.decode();
+    let best: Blob | null = null;
+
+    for (const maxDimension of [1600, 1200, 960, 720]) {
+      const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("This photo could not be prepared. Try another image.");
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+      for (const quality of [0.84, 0.74, 0.64]) {
+        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+        if (blob && (!best || blob.size < best.size)) best = blob;
+        if (blob && blob.size <= targetAvatarBytes) {
+          const basename = file.name.replace(/\.[^.]+$/, "") || "profile";
+          return new File([blob], `${basename}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
+        }
+      }
+    }
+
+    if (best && best.size <= maxAvatarBytes) {
+      const basename = file.name.replace(/\.[^.]+$/, "") || "profile";
+      return new File([best], `${basename}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
+    }
+    throw new Error("This photo is too large to upload. Choose a smaller image.");
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 export function Profile() {
   const account = useAccount();
   const [saving, setSaving] = useState(false);
@@ -52,7 +98,7 @@ export function Profile() {
     setNotice("");
     try {
       const formData = new FormData();
-      formData.set("avatar", file);
+      formData.set("avatar", await prepareAvatarUpload(file));
       const result = await uploadProfileAvatarAction(formData);
       if (result.error || !result.avatarUrl || !account.profile) {
         setNotice(result.error || "Photo could not be saved. Please try again.");
@@ -60,8 +106,8 @@ export function Profile() {
       }
       account.setProfile({ ...account.profile, avatar_url: result.avatarUrl });
       setNotice("Profile picture updated.");
-    } catch {
-      setNotice("Photo could not be uploaded. Please try again.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Photo could not be uploaded. Please try again.");
     } finally {
       setUploadingPhoto(false);
       e.target.value = "";
