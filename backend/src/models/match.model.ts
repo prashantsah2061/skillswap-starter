@@ -23,9 +23,13 @@ export function matchModel(client: SupabaseClient) {
           .select("id,display_name,bio").in("id", partnerIds),
         client.rpc("get_match_avatar_paths", { p_partner_ids: partnerIds }),
       ]);
-      if (profileError || !profiles || avatarError || !avatars) throw unavailable();
+      if (profileError || !profiles) throw unavailable();
       const byId = new Map(profiles.map((profile) => [profile.id, profile] as const));
-      const avatarRows = avatars as unknown as { user_id: string; avatar_path: string | null }[];
+      // Avatar metadata is optional; an RPC/schema-cache problem must not hide
+      // otherwise available matches. The client renders initials as fallback.
+      const avatarRows = !avatarError && Array.isArray(avatars)
+        ? avatars as unknown as { user_id: string; avatar_path: string | null }[]
+        : [];
       const avatarPathById = new Map(avatarRows.map((avatar) => [avatar.user_id, avatar.avatar_path] as const));
       return visibleMatches.map((row) => {
         const partnerId = row.user_a === actorId ? row.user_b : row.user_a;
