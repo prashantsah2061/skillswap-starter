@@ -23,28 +23,27 @@ export function matchModel(client: SupabaseClient) {
       const visibleMatches = matches.filter((row) => !hiddenIds.has(row.user_a === actorId ? row.user_b : row.user_a));
       const partnerIds = [...new Set(visibleMatches.map((row) => row.user_a === actorId ? row.user_b : row.user_a))];
       if (!partnerIds.length) return [];
-      const [{ data: profiles, error: profileError }, { data: avatars, error: avatarError }] = await Promise.all([
-        client.from("profiles")
-          .select("id,display_name,bio").in("id", partnerIds),
-        client.rpc("get_match_avatar_paths", { p_partner_ids: partnerIds }),
-      ]);
-      if (profileError || !profiles) throw unavailableAt("partner_profiles_query", profileError?.code);
-      const byId = new Map(profiles.map((profile) => [profile.id, profile] as const));
-      // Avatar metadata is optional; an RPC/schema-cache problem must not hide
-      // otherwise available matches. The client renders initials as fallback.
-      const avatarRows = !avatarError && Array.isArray(avatars)
-        ? avatars as unknown as { user_id: string; avatar_path: string | null }[]
-        : [];
-      const avatarPathById = new Map(avatarRows.map((avatar) => [avatar.user_id, avatar.avatar_path] as const));
+      const { data: partnerRows, error: partnerError } = await client.rpc(
+        "get_match_partner_profiles", { p_partner_ids: partnerIds },
+      );
+      if (partnerError || !Array.isArray(partnerRows)) {
+        throw unavailableAt("match_partner_profiles_rpc", partnerError?.code);
+      }
+      const partners = partnerRows as unknown as {
+        user_id: string; display_name: string; bio: string; avatar_path: string | null;
+      }[];
+      const byId = new Map(partners.map((partner) => [partner.user_id, partner] as const));
       return visibleMatches.map((row) => {
         const partnerId = row.user_a === actorId ? row.user_b : row.user_a;
         const partner = byId.get(partnerId);
         if (!partner) throw unavailableAt("partner_profile_missing");
-        const avatarPath = avatarPathById.get(partnerId);
-        const avatarUrl = avatarPath
-          ? client.storage.from("avatars").getPublicUrl(avatarPath).data.publicUrl
+        const avatarUrl = partner.avatar_path
+          ? client.storage.from("avatars").getPublicUrl(partner.avatar_path).data.publicUrl
           : null;
-        return { id: row.id, created_at: row.created_at, partner: { ...partner, avatar_url: avatarUrl } };
+        return {
+          id: row.id, created_at: row.created_at,
+          partner: { id: partner.user_id, display_name: partner.display_name, bio: partner.bio, avatar_url: avatarUrl },
+        };
       });
     },
 
