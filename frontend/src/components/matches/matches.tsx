@@ -24,6 +24,12 @@ export function Matches() {
     {loading && <p className="card empty" role="status">Loading your matches…</p>}
     {error && <div className="card empty"><p role="alert">{error}</p><button className="button" onClick={() => location.reload()}>Try again</button></div>}
     {!loading && !error && !matches.length && <div className="card empty"><h2>No matches yet</h2><p>Explore people and send interest to start matching. A confirmed match appears here after both people are interested.</p><Link className="button" href="/discover">Discover partners</Link></div>}
-    {!!matches.length && <div className="matches-grid">{matches.map(match => <article key={match.id} className="card match-card"><div className="avatar" aria-hidden="true">{match.partner.display_name[0]}</div><div><span className="badge mint">Confirmed match</span><h2>{match.partner.display_name}</h2><p>{match.partner.bio || "Ready to exchange skills."}</p><p className="muted">Matched {new Date(match.created_at).toLocaleDateString()}</p><Link className="button full" href={`/messages/${match.id}`}>Send message →</Link><Link className="text-button" href="/sessions">Schedule a session →</Link><SafetyActions targetId={match.partner.id} matchId={match.id} onBlocked={() => location.reload()} /></div></article>)}</div>}
+    {!!matches.length && <div className="matches-grid">{matches.map(match => <article key={match.id} className="card match-card">
+      {match.partner.avatar_url
+        // eslint-disable-next-line @next/next/no-img-element -- Supabase project host is configured at runtime.
+        ? <img className="match-avatar" src={match.partner.avatar_url} alt={`${match.partner.display_name}'s profile photo`} loading="lazy" decoding="async" />
+        : <div className="avatar match-avatar-fallback" role="img" aria-label={`${match.partner.display_name}'s profile photo unavailable`}>{match.partner.display_name.trim().charAt(0).toUpperCase()}</div>}
+      <div><span className="badge mint">Confirmed match</span><h2>{match.partner.display_name}</h2><p>{match.partner.bio || "Ready to exchange skills."}</p><p className="muted">Matched {new Date(match.created_at).toLocaleDateString()}</p><Link className="button full" href={`/messages/${match.id}`}>Send message →</Link><Link className="text-button" href="/sessions">Schedule a session →</Link><SafetyActions targetId={match.partner.id} matchId={match.id} onBlocked={() => location.reload()} /></div>
+    </article>)}</div>}
   </>;
 }

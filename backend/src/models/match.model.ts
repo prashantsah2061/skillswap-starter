@@ -18,15 +18,24 @@ export function matchModel(client: SupabaseClient) {
       const visibleMatches = matches.filter((row) => !hiddenIds.has(row.user_a === actorId ? row.user_b : row.user_a));
       const partnerIds = [...new Set(visibleMatches.map((row) => row.user_a === actorId ? row.user_b : row.user_a))];
       if (!partnerIds.length) return [];
-      const { data: profiles, error: profileError } = await client.from("profiles")
-        .select("id,display_name,bio").in("id", partnerIds);
-      if (profileError || !profiles) throw unavailable();
+      const [{ data: profiles, error: profileError }, { data: avatars, error: avatarError }] = await Promise.all([
+        client.from("profiles")
+          .select("id,display_name,bio").in("id", partnerIds),
+        client.rpc("get_match_avatar_paths", { p_partner_ids: partnerIds }),
+      ]);
+      if (profileError || !profiles || avatarError || !avatars) throw unavailable();
       const byId = new Map(profiles.map((profile) => [profile.id, profile] as const));
+      const avatarRows = avatars as unknown as { user_id: string; avatar_path: string | null }[];
+      const avatarPathById = new Map(avatarRows.map((avatar) => [avatar.user_id, avatar.avatar_path] as const));
       return visibleMatches.map((row) => {
         const partnerId = row.user_a === actorId ? row.user_b : row.user_a;
         const partner = byId.get(partnerId);
         if (!partner) throw unavailable();
-        return { id: row.id, created_at: row.created_at, partner };
+        const avatarPath = avatarPathById.get(partnerId);
+        const avatarUrl = avatarPath
+          ? client.storage.from("avatars").getPublicUrl(avatarPath).data.publicUrl
+          : null;
+        return { id: row.id, created_at: row.created_at, partner: { ...partner, avatar_url: avatarUrl } };
       });
     },
 

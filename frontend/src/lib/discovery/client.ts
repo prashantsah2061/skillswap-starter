@@ -18,7 +18,7 @@ const discovery = z.object({
 });
 export type PublicSkill = z.infer<typeof skill>;
 export type PublicSelection = Pick<z.infer<typeof listing>, "skill_id" | "direction" | "level" | "goal_level">;
-const matchSummary = z.object({ id: uuid, created_at: z.string(), partner: publicProfile });
+const matchSummary = z.object({ id: uuid, created_at: z.string(), partner: publicProfile.extend({ avatar_url: z.string().url().nullable() }) });
 const pendingInterest = z.object({ created_at: z.string(), partner: publicProfile });
 const message = z.object({ id: uuid, match_id: uuid, sender_id: uuid, body: z.string(), created_at: z.string(), mine: z.boolean() });
 const session = z.object({

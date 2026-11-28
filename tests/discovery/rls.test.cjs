@@ -31,12 +31,15 @@ test('isolated PostgreSQL: discovery visibility, actor-only swipes, private prof
       '20261106211146_user_safety_controls.sql', '20261106211800_public_onboarding_visibility.sql',
       '20261106214000_profile_update_grants.sql', '20261107000100_discovery_ranking_and_visibility.sql',
     ]) await db.exec(fs.readFileSync('backend/supabase/migrations/' + migration, 'utf8'));
+    await db.exec('alter table public.account_profiles add column avatar_path text');
+    await db.exec(fs.readFileSync('backend/supabase/migrations/20261128062307_match_avatar_paths.sql', 'utf8'));
     await db.query(`insert into auth.users(id,email_confirmed_at) values ($1,now()),($2,now()),($3,now())`, [a, b, c]);
     await db.query(`insert into auth.sessions values ($1,$2)`, [session, a]);
     await db.query(`insert into auth.sessions values ('20000000-0000-4000-8000-000000000003',$1)`, [c]);
     await db.query(`insert into public.profiles(id,display_name,visible,onboarded) values ($1,'Member A',true,true),($2,'Member B',true,true)`, [a, b]);
     // C has only a private frontend profile; it must not appear in discovery.
-    await db.query(`insert into public.account_profiles(user_id,display_name) values ($1,'Private A'),($2,'Private B'),($3,'Private C')`, [a, b, c]);
+    await db.query(`insert into public.account_profiles(user_id,display_name,avatar_path) values
+      ($1,'Private A',null),($2,'Private B',$4),($3,'Private C',$5)`, [a, b, c, `${b}/avatar.webp`, `${c}/avatar.webp`]);
     await db.query(`insert into public.skills(id,name) values ($1,'Python'),($2,'Guitar')`, [python, guitar]);
     await db.query(`insert into public.user_skills(user_id,skill_id,direction) values
       ($1,$3,'teach'),($1,$4,'learn'),($2,$4,'teach'),($2,$3,'learn')`, [a, b, python, guitar]);
@@ -81,6 +84,11 @@ test('isolated PostgreSQL: discovery visibility, actor-only swipes, private prof
     const upgraded = await db.query('select * from public.record_swipe($1,\'like\')', [b]);
     assert.equal(upgraded.rows[0].matched, true);
     assert.equal((await db.query('select count(*)::int as count from public.matches where user_a=$1 and user_b=$2', [a, b])).rows[0].count, 1);
+    assert.deepEqual((await db.query('select * from public.get_match_avatar_paths($1)', [[b, c]])).rows,
+      [{ user_id: b, avatar_path: `${b}/avatar.webp` }]);
+    await db.query('insert into public.user_blocks(blocker_id,blocked_id) values ($1,$2)', [a, b]);
+    assert.deepEqual((await db.query('select * from public.get_match_avatar_paths($1)', [[b]])).rows, []);
+    await db.query('delete from public.user_blocks where blocker_id=$1 and blocked_id=$2', [a, b]);
     const oneSided = await db.query('select * from public.record_swipe($1,\'like\')', [c]);
     assert.equal(oneSided.rows[0].matched, false);
     assert.equal((await db.query('select count(*)::int as count from public.matches where user_a=$1 or user_b=$1', [c])).rows[0].count, 0);
@@ -105,5 +113,6 @@ test('isolated PostgreSQL: discovery visibility, actor-only swipes, private prof
     for (const table of ['profiles', 'skills', 'user_skills', 'swipes', 'account_profiles']) {
       await assert.rejects(() => db.query(`select * from public.${table}`));
     }
+    await assert.rejects(() => db.query('select * from public.get_match_avatar_paths($1)', [[b]]));
   } finally { await db.close(); }
 });
