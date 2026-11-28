@@ -3,6 +3,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { DiscoveryError, unavailable } from "../lib/discovery/errors";
 import type { SessionAction } from "../lib/validators/session";
 
+function unavailableAt(stage: string, code?: string) {
+  console.error("[sessions] list failed", { stage, code: code ?? null });
+  return unavailable();
+}
+
 export function sessionModel(client: SupabaseClient) {
   return {
     async requireConfirmedCallMember(actorId: string, sessionId: string) {
@@ -29,25 +34,31 @@ export function sessionModel(client: SupabaseClient) {
       const { data: sessions, error } = await client.from("skill_sessions")
         .select("id,match_id,created_by,proposed_by,status,scheduled_at,proposed_at,duration_minutes,notes,created_at,updated_at")
         .order("scheduled_at", { ascending: true }).order("id", { ascending: true }).limit(100);
-      if (error || !sessions) throw unavailable();
+      if (error || !sessions) throw unavailableAt("sessions_query", error?.code);
       if (!sessions.length) return [];
 
       const matchIds = [...new Set(sessions.map(row => row.match_id))];
       const { data: matches, error: matchError } = await client.from("matches")
         .select("id,user_a,user_b").in("id", matchIds);
-      if (matchError || !matches) throw unavailable();
+      if (matchError || !matches) throw unavailableAt("matches_query", matchError?.code);
       const partnerIds = [...new Set(matches.map(row => row.user_a === actorId ? row.user_b : row.user_a))];
-      const { data: profiles, error: profileError } = await client.from("profiles")
-        .select("id,display_name,bio").in("id", partnerIds);
-      if (profileError || !profiles) throw unavailable();
+      if (!partnerIds.length) return [];
+      const { data: profiles, error: profileError } = await client.rpc(
+        "get_match_partner_profiles", { p_partner_ids: partnerIds },
+      );
+      if (profileError || !Array.isArray(profiles)) {
+        throw unavailableAt("match_partner_profiles_rpc", profileError?.code);
+      }
       const matchById = new Map(matches.map(row => [row.id, row] as const));
-      const profileById = new Map(profiles.map(row => [row.id, row] as const));
+      const profileById = new Map((profiles as unknown as {
+        user_id: string; display_name: string; bio: string;
+      }[]).map(row => [row.user_id, { id: row.user_id, display_name: row.display_name, bio: row.bio }] as const));
 
       return sessions.map(row => {
         const match = matchById.get(row.match_id);
         const partnerId = match && (match.user_a === actorId ? match.user_b : match.user_a);
         const partner = partnerId ? profileById.get(partnerId) : undefined;
-        if (!partner) throw unavailable();
+        if (!partner) throw unavailableAt("partner_profile_missing");
         return {
           ...row, partner, mine: row.created_by === actorId, can_accept: row.proposed_by !== actorId,
           can_complete: row.status === "confirmed" && new Date(row.scheduled_at).getTime() <= Date.now(),
