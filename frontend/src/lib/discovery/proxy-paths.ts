@@ -5,4 +5,4 @@ export const discoveryProxyPaths = [
   "/api/swipes", "/api/matches", "/api/sessions", "/api/blocks", "/api/reports",
 ];
 export const isBackendProxyPath = (path: string) =>
-  discoveryProxyPaths.includes(path) || /^\/api\/matches\/[0-9a-f-]{36}\/messages$/.test(path);
+  discoveryProxyPaths.includes(path) || /^\/api\/matches\/[0-9a-f-]{36}\/messages$/.test(path) || /^\/api\/sessions\/[0-9a-f-]{36}\/call-token$/.test(path);

@@ -5,6 +5,26 @@ import type { SessionAction } from "../lib/validators/session";
 
 export function sessionModel(client: SupabaseClient) {
   return {
+    async requireConfirmedCallMember(actorId: string, sessionId: string) {
+      const { data: session, error: sessionError } = await client.from("skill_sessions")
+        .select("id,match_id,status").eq("id", sessionId).maybeSingle();
+      if (sessionError) throw unavailable();
+      if (!session) throw new DiscoveryError(404, "NOT_FOUND", "Session not found.");
+
+      // The user's Supabase client applies the existing session and match RLS
+      // policies here, including account assurance and hidden/blocked matches.
+      const { data: match, error: matchError } = await client.from("matches")
+        .select("id,user_a,user_b").eq("id", session.match_id).maybeSingle();
+      if (matchError) throw unavailable();
+      if (!match || (match.user_a !== actorId && match.user_b !== actorId)) {
+        throw new DiscoveryError(404, "NOT_FOUND", "Session not found.");
+      }
+      if (session.status !== "confirmed") {
+        throw new DiscoveryError(409, "SESSION_NOT_CONFIRMED", "Only confirmed sessions can be joined.");
+      }
+      return session;
+    },
+
     async list(actorId: string) {
       const { data: sessions, error } = await client.from("skill_sessions")
         .select("id,match_id,created_by,proposed_by,status,scheduled_at,proposed_at,duration_minutes,notes,created_at,updated_at")

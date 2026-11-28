@@ -94,6 +94,7 @@ export function Sessions({ selectedId }: { selectedId?: string }) {
       {session.status === "reschedule_requested" && session.proposed_at && <p className="feedback">New time proposed: {new Date(session.proposed_at).toLocaleString()}{session.can_accept ? " · Please accept or cancel." : " · Waiting for your partner."}</p>}
       {session.notes && <p>{session.notes}</p>}
       {controls(session)}
+      {session.status === "confirmed" && <Link className="button lime session-call-link" href={`/sessions/${session.id}/call`}>Join video session</Link>}
       <Link className="text-button" href={`/sessions/${session.id}`}>Session details →</Link>
     </article>)}</div>
     {selectedId && !loading && !sessions.some(session => session.id === selectedId) && <div className="card empty"><h2>Session unavailable</h2><Link className="button" href="/sessions">View your sessions</Link></div>}

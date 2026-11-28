@@ -10,9 +10,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@livekit/components-react": "2.9.26",
+    "@livekit/components-styles": "1.2.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.118.0",
     "@tailwindcss/postcss": "^4.3.3",
+    "livekit-client": "2.25.0",
     "lucide-react": "^1.63.0",
     "motion": "^14.7.1",
     "next": "^16.0.0",

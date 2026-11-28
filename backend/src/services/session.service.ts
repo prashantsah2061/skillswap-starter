@@ -4,6 +4,8 @@ import { sessionModel } from "../models/session.model";
 import type { SessionAction } from "../lib/validators/session";
 
 export const listSessions = (client: SupabaseClient, actorId: string) => sessionModel(client).list(actorId);
+export const requireConfirmedCallMember = (client: SupabaseClient, actorId: string, sessionId: string) =>
+  sessionModel(client).requireConfirmedCallMember(actorId, sessionId);
 export async function actOnSession(client: SupabaseClient, input: SessionAction) {
   return sessionModel(client).act(input);
 }

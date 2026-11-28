@@ -2577,3 +2577,50 @@ input:focus, textarea:focus, select:focus { outline: 2px solid #4f6f5d55; border
 @media (prefers-reduced-motion: reduce) {
   .partner-card, .button { transition: none; }
 }
+
+.session-call-link { display: inline-flex; align-items: center; justify-content: center; margin: 2px 10px 2px 0; }
+.session-call-page { max-width: 1200px; margin: 0 auto; }
+.session-call-heading, .active-call-topline { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.session-call-heading { margin-bottom: 24px; }
+.session-call-heading h1 { font-size: clamp(30px, 4vw, 46px); }
+.session-call-heading .subtitle { max-width: 620px; margin-bottom: 0; font-size: 17px; }
+.call-prejoin { display: grid; grid-template-columns: minmax(220px, .75fr) minmax(300px, 1.25fr); gap: 18px 32px; padding: clamp(18px, 4vw, 34px); }
+.call-prejoin-copy h2 { font-size: 24px; }
+.call-prejoin-copy p:last-child { margin-bottom: 0; }
+.skillswap-prejoin { min-width: 0; }
+.skillswap-prejoin .lk-prejoin { background: transparent; color: var(--ink); }
+.skillswap-prejoin .lk-button { min-height: 44px; }
+.call-privacy-note, .call-inline-status { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 13px; }
+.call-inline-status { color: var(--accent-blue); }
+.call-state { padding: 28px; }
+.call-state p:last-child { margin-bottom: 0; }
+.call-error { margin: 0 0 18px; padding: 15px 18px; border: 1px solid var(--danger); border-radius: 12px; background: var(--danger-bg); color: var(--ink); }
+.call-error p { margin: 4px 0; }
+.call-error .text-button { padding: 3px 0; }
+.skillswap-livekit-room { display: block; }
+.active-call { overflow: hidden; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); box-shadow: var(--panel-shadow); padding: clamp(14px, 2.5vw, 26px); }
+.active-call-topline { margin-bottom: 12px; }
+.active-call-topline .eyebrow { margin-bottom: 4px; }
+.active-call-topline h2 { margin-bottom: 0; }
+.call-connection-status { display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border-radius: 999px; background: var(--surface-raised); color: var(--muted); font-size: 13px; }
+.call-connection-status.is-connected { color: var(--accent-cyan); background: var(--soft-cyan); }
+.call-reconnect-message { margin: 12px 0; padding: 10px 13px; border-radius: 10px; color: var(--accent-blue); background: var(--soft-blue); }
+.call-participant-count { margin: 10px 0; color: var(--muted); font-size: 13px; }
+.skillswap-call-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 14px; min-height: min(68vh, 680px); }
+.skillswap-call-grid .lk-participant-tile { min-height: 280px; overflow: hidden; border-radius: 14px; background: #17211c; }
+.skillswap-call-grid .lk-participant-tile video { object-fit: cover; }
+.call-controls { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; padding-top: 20px; }
+.call-control { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 112px; min-height: 48px; padding: 9px 15px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-raised); color: var(--ink); font-weight: 600; }
+.call-control:hover { background: var(--soft-cyan); }
+.call-control.is-off { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, var(--border)); }
+.call-control.call-leave { background: var(--danger); color: #fff; border-color: var(--danger); }
+.call-control.call-leave:hover { filter: brightness(.95); }
+@media (max-width: 700px) {
+  .session-call-heading { align-items: flex-start; flex-direction: column; gap: 14px; }
+  .call-prejoin { grid-template-columns: 1fr; }
+  .call-privacy-note, .call-inline-status { grid-column: auto; }
+  .skillswap-call-grid { min-height: auto; grid-template-columns: 1fr; }
+  .skillswap-call-grid .lk-participant-tile { min-height: min(58vh, 440px); }
+  .active-call-topline { align-items: flex-start; }
+  .call-control { min-width: 96px; flex: 1; }
+}
