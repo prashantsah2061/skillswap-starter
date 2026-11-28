@@ -4,8 +4,11 @@ import { DiscoveryError, unavailable } from "../discovery/errors";
 
 export const privateHeaders = { "Cache-Control": "private, no-store" };
 
-export async function publicResponse(action: () => Promise<unknown>) {
-  try { return NextResponse.json({ data: await action() }, { headers: privateHeaders }); }
+export async function publicResponse(action: () => Promise<unknown>, options: { wrapData?: boolean } = {}) {
+  try {
+    const result = await action();
+    return NextResponse.json(options.wrapData === false ? result : { data: result }, { headers: privateHeaders });
+  }
   catch (error) {
     const failure = error instanceof DiscoveryError ? error : unavailable();
     return NextResponse.json({ error: { code: failure.code, message: failure.message } }, { status: failure.status, headers: privateHeaders });

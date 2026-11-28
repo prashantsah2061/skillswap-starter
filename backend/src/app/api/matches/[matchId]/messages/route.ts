@@ -14,7 +14,7 @@ export async function GET(request: Request, context: Context) {
     const { client, user } = await requirePublicApiUser();
     const query = parseMessageQuery(request.url, user.id, matchId);
     return listMessages(client, user.id, matchId, query.limit, query.before);
-  });
+  }, { wrapData: false });
 }
 
 export async function POST(request: Request, context: Context) {
